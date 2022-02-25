@@ -22,7 +22,7 @@ public class StudentPlayerRandomFit extends PylosPlayer {
                 options.add(pl);
             }
         }
-        int random = (int) Math.random() * options.size();
+        int random = (int) (Math.random() * options.size());
         return options.get(random);
     }
 
@@ -56,7 +56,7 @@ public class StudentPlayerRandomFit extends PylosPlayer {
             if(sphere.canRemove())removableSpheres.add(sphere);
         }
         //choose a random removable sphere
-        int random = (int) Math.random() * removableSpheres.size();
+        int random = (int) (Math.random() * removableSpheres.size());
 
         return removableSpheres.get(random);
     }
