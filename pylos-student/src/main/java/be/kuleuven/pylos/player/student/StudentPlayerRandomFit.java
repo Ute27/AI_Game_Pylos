@@ -36,12 +36,28 @@ public class StudentPlayerRandomFit extends PylosPlayer {
     @Override
     public void doRemove(PylosGameIF game, PylosBoard board) {
         /* removeSphere a random sphere */
-
+        PylosSphere sphere = randomFeasibleRemove(board);
+        game.removeSphere(sphere);
     }
 
     @Override
     public void doRemoveOrPass(PylosGameIF game, PylosBoard board) {
         /* always pass */
+        game.pass();
+    }
 
+    private PylosSphere randomFeasibleRemove(PylosBoard board){
+
+        PylosSphere[] mySpheres = board.getSpheres(this);
+        List<PylosSphere> removableSpheres = new ArrayList<>();
+
+        //check each sphere that is on the board if it can be removed
+        for(PylosSphere sphere: mySpheres){
+            if(sphere.canRemove())removableSpheres.add(sphere);
+        }
+        //choose a random removable sphere
+        int random = (int) Math.random() * removableSpheres.size();
+
+        return removableSpheres.get(random);
     }
 }
