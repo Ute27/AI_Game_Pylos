@@ -15,17 +15,6 @@ import java.util.Random;
  */
 public class StudentPlayerRandomFit extends PylosPlayer {
 
-    public PylosLocation getRandomFeasibleLocation(PylosGameIF game, PylosBoard board) {
-        List<PylosLocation> options = new ArrayList<>();
-        for (PylosLocation pl : board.getLocations()) {
-            if (board.getReserve(this).canMoveTo(pl)) {
-                options.add(pl);
-            }
-        }
-        int random = (int) (Math.random() * options.size());
-        return options.get(random);
-    }
-
     @Override
     public void doMove(PylosGameIF game, PylosBoard board) {
         /* add a reserve sphere to a feasible random location */
