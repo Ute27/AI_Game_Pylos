@@ -18,6 +18,10 @@ public class StudentPlayerBestFit extends PylosPlayer{
         return null;
     }
 
+    // globale map: key= sphere , value = score // optioneel: 2 scores, verliezend of winnend
+    // globale Board opslaan, en iedere locatie vergelijkt met de vorige -> nieuwe scores
+    // evaluatie fctie: vierkant, eigen ballen in square viscinity, enemy ballen in square viscinity, hoe lager de bal; hoe lager de score
+    // eigen vierkant of enemy vierkant? -> hangt ervan af hoeveel ballen in reserve zijn bij ons en de enemy
     @Override
     public void doMove(PylosGameIF game, PylosBoard board) {
         //Stap 1: check als je een vierkant kan maken

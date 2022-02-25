@@ -46,6 +46,17 @@ public class StudentPlayerRandomFit extends PylosPlayer {
         game.pass();
     }
 
+    private PylosLocation getRandomFeasibleLocation(PylosGameIF game, PylosBoard board) {
+        List<PylosLocation> options = new ArrayList<>();
+        for (PylosLocation pl : board.getLocations()) {
+            if (board.getReserve(this).canMoveTo(pl)) {
+                options.add(pl);
+            }
+        }
+        int random = (int) (Math.random() * options.size());
+        return options.get(random);
+    }
+
     private PylosSphere randomFeasibleRemove(PylosBoard board){
 
         PylosSphere[] mySpheres = board.getSpheres(this);
