@@ -25,6 +25,7 @@ public class StudentPlayerBestFit extends PylosPlayer{
     @Override
     public void doMove(PylosGameIF game, PylosBoard board) {
 
+        //Initialize method will have saved the previous board and checked which color this player is + added spheres to map
         if (!initialized)initializeScore(board);
         calculateAllScores(board);
 
@@ -196,12 +197,13 @@ public class StudentPlayerBestFit extends PylosPlayer{
 
     reserve = 85        // min score is 50
 
-    own spheres --> n*n*15 + 30
+    own spheres --> (n-1)*(n-1)*15 + 30 ... gebruik mss toch geen algemene formule wegens de reden gegeven bij 3 spheres
+            Vergeet niet: uw eigen bol wordt in uw redenering ook meegeteld als ownSpheres maw opties zijn 1,2,3,4
 
-    0 own spheres = 30
-    1 own spheres = 45
-    2 own spheres = 90
-    3 own spheres = 165
+    0 own spheres (+this) = 30
+    1 own spheres (+this) = 45
+    2 own spheres (+this) = 90
+    3 own spheres (+this) = 165 -> Dit moet 0 zijn. Het is juist goed om die weg te halen omdat je dan mss nog eens een kans hebt om dat vierkant opnieuw te maken!
 
     enemy spheres --> n*n*15 + 20
 
@@ -210,22 +212,33 @@ public class StudentPlayerBestFit extends PylosPlayer{
     2 enemy spheres = 80
     3 enemy spheres = 155
 
-    height bal = z * 30          (kan mis (z+1)*30 worden)
+    height bal = z * 30          z is goed want we willen liever een bal van de onderste laag naar een bovenste leggen dan eentje halen uit reserve dus geen extra punten voor eerste layer
      */
     private void evaluationFunction(PylosSphere sphere, PylosBoard board){
-        int foundSquares = 0;
+
+        /*
+                STEP 1: If the sphere is still in the reserve, we will not need to calculate a score.
+         */
+        if(sphere.isReserve()) {
+            scoreMap.replace(sphere , reserveScore);
+            return;
+        }
+
+        /*
+                STEP 2: Looking for squares in which the sphere is located
+         */
         List<PylosSquare> goodSquares = new ArrayList<>();
 
         //searches the squares where the sphere is in; min 1 , max 4
+        //TODO: mogelijke verbetering qua snelheid: je checkt van elke square maar 1 locatie en pas als die max 1 verschilt qua coordinaten met eigen locatie, kijk je naar de rest. Gaat wel enkel beter zijn bij grotere spelborden
         for(PylosSquare square : board.getAllSquares()){
             for(PylosLocation location : square.getLocations()){
                 if(sphere.getLocation() == location){
-                    foundSquares++;
                     goodSquares.add(square);
                     break;
                 }
             }
-            if(foundSquares==4)break;
+            if(goodSquares.size()==4)break;
         }
 
         // after the squares are found calculate the new score
@@ -239,7 +252,12 @@ public class StudentPlayerBestFit extends PylosPlayer{
         for(PylosSquare square : goodSquares){
             enemySpheres = square.getInSquare(enemyColor);
             ownSpheres = square.getInSquare(this.PLAYER_COLOR);
-            score += (enemySpheres * enemySpheres +20) + (ownSpheres * ownSpheres + 30);
+            score += (enemySpheres * enemySpheres * 15 +20);
+            //If ownSpheres is 4, there already is a square of own color so it would be best to remove this sphere if possible in order to remake the square
+            if(ownSpheres!=4) {
+                score += (ownSpheres-1) * (ownSpheres-1) * 15 + 30;
+            }
+
         }
         score += height * 30;
 
