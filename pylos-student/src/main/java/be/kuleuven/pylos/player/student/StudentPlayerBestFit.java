@@ -15,7 +15,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private PylosBoard previousBoard;
     private PylosPlayerColor enemyColor;
 
-    private final int reserveScore = 80;
+    private final int reserveScore = 150;
 
     // check** globale map: key= sphere , value = score // optioneel: 2 scores, verliezend of winnend
     // check** (ben niet zeker of dit nodig is)+(java gebruikt pass by copy bij argumenten) globale Board opslaan, en iedere locatie vergelijkt met de vorige -> nieuwe scores
@@ -28,6 +28,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         //Initialize method will have saved the previous board and checked which color this player is + added spheres to map
         if (!initialized) initializeScore(board);
         //TODO we moeten het previousboard gebruiken zodat we een updateScores kunnen doen en de scores niet iedere keer allemaal moeten herberekenen.
+        //TODO antwoord: ik denk eigenlijk niet dat dit sneller zou zijn dan alle scores op het veld te berekenen, dit zouden we dan kunnen testen
         calculateAllScores(board);
 
         //step 1
@@ -52,7 +53,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         //Idem bij enemy en zo een plek proberen saboteren
 
         //TODO: ik zou hier de beste plek proberen zoeken ook door een scoresysteem? Dus hier eens berekenen enkel voor lege, legbare plekken. Hogere score hoe meer bollen van eenzelfde kleur er naast liggen en we willen een bol leggen op de hoogste score.
-
+        //TODO: ik dacht hiervoor die simulatie te kunnen gebruiken en dan de bal te plaatsen waar hij de hoogste score zou krijgen. Maar weet nog niet goed hoe wat met die simulatie mogelijk is
 
     }
 
@@ -92,6 +93,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private boolean makeOrSabotageBestSquareFromList(PylosGameIF game, PylosBoard board, List<PylosSquare> doableSquares) {
         //Initialize moving values, should be overwrited anyway
         //TODO: wat doen we als de reservelijst op is? Er is een kans dat er gewoon geen zet mogelijk is?
+        //TODO: antwoord: als de reservelijst op is dan hebben we of gewonnen of verloren. Game is zowiezo dan gedaan in onze zet of die van de tegenstander hierna
         PylosSphere movingSphere = board.getReserve(this);
         PylosLocation movingLocation = null;
 
@@ -189,23 +191,30 @@ public class StudentPlayerBestFit extends PylosPlayer {
     //calculate the new scores for all our spheres on the board
     private void calculateAllScores(PylosBoard board) {
         PylosSphere[] mySpheres = board.getSpheres(this);
+
         for (PylosSphere sphere : mySpheres) {
-            evaluationFunction(sphere, board);
+
+            // If the sphere is still in the reserve, we will not need to calculate a score.
+            if (!sphere.isReserve()) {
+                evaluationFunction(sphere, board);
+
+            }
+
         }
     }
 
     /*gives a score to a sphere
     higher score = better placement
 
-    reserve = 85        // min score is 50
+    reserve = 150        // min score is 50 per square
 
     own spheres --> (n-1)*(n-1)*15 + 30 ... gebruik mss toch geen algemene formule wegens de reden gegeven bij 3 spheres
             Vergeet niet: uw eigen bol wordt in uw redenering ook meegeteld als ownSpheres maw opties zijn 1,2,3,4
 
-    0 own spheres (+this) = 30
-    1 own spheres (+this) = 45
-    2 own spheres (+this) = 90
-    3 own spheres (+this) = 165 -> Dit moet 0 zijn. Het is juist goed om die weg te halen omdat je dan mss nog eens een kans hebt om dat vierkant opnieuw te maken!
+    1 own spheres  = 30  --> 45
+    2 own spheres  = 45 --> 90
+    3 own spheres  = 90 --> 165
+    4 own spheres = 0
 
     enemy spheres --> n*n*15 + 20
 
@@ -214,17 +223,9 @@ public class StudentPlayerBestFit extends PylosPlayer {
     2 enemy spheres = 80
     3 enemy spheres = 155
 
-    height bal = z * 30          z is goed want we willen liever een bal van de onderste laag naar een bovenste leggen dan eentje halen uit reserve dus geen extra punten voor eerste layer
+    height bal = z * 30
      */
     private void evaluationFunction(PylosSphere sphere, PylosBoard board) {
-
-        /*
-                STEP 1: If the sphere is still in the reserve, we will not need to calculate a score.
-         */
-        if (sphere.isReserve()) {
-            scoreMap.replace(sphere, reserveScore);
-            return;
-        }
 
         /*
                 STEP 2: Looking for squares in which the sphere is located
@@ -233,6 +234,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         //searches the squares where the sphere is in; min 1 , max 4
         //TODO: mogelijke verbetering qua snelheid: je checkt van elke square maar 1 locatie en pas als die max 1 verschilt qua coordinaten met eigen locatie, kijk je naar de rest. Gaat wel enkel beter zijn bij grotere spelborden
+        //TODO: het board blijft altijd dezelfde grootte normaal
         for (PylosSquare square : board.getAllSquares()) {
             for (PylosLocation location : square.getLocations()) {
                 if (sphere.getLocation() == location) {
@@ -257,8 +259,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
             score += (enemySpheres * enemySpheres * 15 + 20);
             //If ownSpheres is 4, there already is a square of own color so it would be best to remove this sphere if possible in order to remake the square
             if (ownSpheres != 4) {
-                score += (ownSpheres - 1) * (ownSpheres - 1) * 15 + 30;
-            }
+                score += (ownSpheres  * ownSpheres  * 15 + 30);
+            } //TODO: mis zelfs score verminderen als vierkant vol zit --> of sphere met de minste score in het vierkant score 0 geven
 
         }
         score += height * 30;
