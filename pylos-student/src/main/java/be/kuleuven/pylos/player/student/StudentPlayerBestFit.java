@@ -27,76 +27,90 @@ public class StudentPlayerBestFit extends PylosPlayer{
 
         //Initialize method will have saved the previous board and checked which color this player is + added spheres to map
         if (!initialized)initializeScore(board);
+        //TODO we moeten het previousboard gebruiken zodat we een updateScores kunnen doen en de scores niet iedere keer allemaal moeten herberekenen.
         calculateAllScores(board);
 
-        //for insurance that we always move a sphere
+        //step 1
+        //Check if we are losing or winning and depending on this info, check for own square first or enemy square first
+        boolean winning = false;
+        if(board.getReservesSize(this) >= board.getReservesSize(enemyColor))winning=true;
+        boolean moved = false;
+
+        //3 onderdelen : 1- kijken of we aan het winnen zijn 2- zo ja is er een bol die al op het veld ligt en naar boven kan 3- anders een uit reserve
+
+        //STEP 1: check for squares (yours or your enemies first depending on winning)
+        if(winning){
+            moved = tryToMakeOwnSquare(game, board);
+            if(!moved) moved = tryToSabotageEnemySquare(game, board);
+        }
+        else {
+            moved = tryToSabotageEnemySquare(game, board);
+            if(!moved) moved = tryToMakeOwnSquare(game, board);
+        }
+
+        //STEP 2: put the sphere somewhere near most other spheres
+        //Mogelijke verbeteringen hier: kijken als je bvb drie bollen dicht bij elkaar hebt en met 1 te zetten, 2 mogelijke square makings creeert
+        //Idem bij enemy en zo een plek proberen saboteren
+
+        //TODO: ik zou hier de beste plek proberen zoeken ook door een scoresysteem? Dus hier eens berekenen enkel voor lege, legbare plekken. Hogere score hoe meer bollen van eenzelfde kleur er naast liggen en we willen een bol leggen op de hoogste score.
+
+
+    }
+
+    private boolean tryToMakeOwnSquare(PylosGameIF game, PylosBoard board) {
+        boolean moved = false;
+
+        //check 1 : can we make our own square?
+        List<PylosSquare> squaresToComplete = getPossibleCompleteOwnSquares(board);
+        if(!squaresToComplete.isEmpty()){
+            moved = makeOrSabotageBestSquareFromList(game, board, squaresToComplete);
+        }
+
+        return moved;
+    }
+
+    private boolean makeOrSabotageBestSquareFromList(PylosGameIF game, PylosBoard board, List<PylosSquare> doableSquares) {
+        //Initialize moving values, should be overwrited anyway
+        //TODO: wat doen we als de reservelijst op is? Er is een kans dat er gewoon geen zet mogelijk is?
         PylosSphere movingSphere = board.getReserve(this);
         PylosLocation movingLocation = null;
 
-        //step 1
-        //Check if we are losing or winning
-        boolean winning = false;
-        if(board.getReservesSize(this) >= board.getReservesSize(enemyColor))winning=true;
+        // step 1 : can we make a square by moving a ball on the board?
+        PylosSphere tempSphere = movingSphere;
+        PylosLocation tempLocation = movingLocation;
 
-        if(winning){
-            //check 1 : can we make our own square?
-            List<PylosSquare> squares = getPossibleCompleteOwnSquares(board);
-            if(!squares.isEmpty()){
-
-                // step 1 : can we make a square by moving a ball on the board?
-                PylosSphere tempSphere = movingSphere;
-                PylosLocation tempLocation = movingLocation;
-
-                for(PylosSquare square: squares){
-                    for(PylosLocation location : square.getLocations()){
-                        tempSphere = squareOnBoardMovable(board, location);
-                        if(tempSphere != null) tempLocation = location;
-                    }
-                    if(tempSphere != null) {
-                        if (scoreMap.get(tempSphere) < scoreMap.get(movingSphere)) {
-                            movingSphere = tempSphere;
-                            movingLocation = tempLocation;
-                        }
-                    }
-                }
-
-                //step 2 : we fill a random square
-                for(PylosLocation location : squares.get(0).getLocations()){
-                    if(movingSphere.canMoveTo(location))movingLocation=location;
-                }
-
-                game.moveSphere(movingSphere, movingLocation);
-
+        for(PylosSquare square: doableSquares){
+            for(PylosLocation location : square.getLocations()){
+                tempSphere = getMovableSquareFromBoardTo(board, location);
+                if(tempSphere != null) tempLocation = location;
             }
-            //check 2 : can we undermine an enemy square
-            else {
-                squares = getPossibleCompleteEnemySquares(board);
-                if(!squares.isEmpty()){
-
+            //check: did we get even one square where we can make it with a sphere from the board?
+            if(tempSphere != null) {
+                //If this best tempSphere from the board has a lower score than movingsphere, we will use it
+                if (scoreMap.get(tempSphere) < scoreMap.get(movingSphere)) {
+                    movingSphere = tempSphere;
+                    movingLocation = tempLocation;
                 }
             }
         }
-        //if we are not winning prioritize the undermining the enemy
-        else {
 
-        }
-        //3 onderdelen : 1- kijken of we aan het winnen zijn 2- zo ja is er een bol die al op het veld ligt en naar boven kan 3- anders een uit reserve
-
-
-        //Stap 1: check als je een vierkant kan maken
-        PylosLocation pl = getLocationToMakeSquare(game, board);
-        if(pl!=null) {
-            //TODO: als je een bol van een lager niveau kan plaatsen naar een square op een hoger niveau
-            //TODO 2.0: kijken als je allebei een vierkant kan maken: wie wint en saboteer je eerst of niet?
-            game.moveSphere(board.getReserve(this),pl);
+        //step 2 : we fill the square that we just chose
+        if(movingSphere.canMoveTo(movingLocation)){
+            game.moveSphere(movingSphere, movingLocation);
+            return true;
         }
 
-        //Stap 2: blokkeer als de ander een vierkant kan maken (door middel van een bol van lager niveau naar hoger niveau)
+        return false;
+    }
 
-        //Stap 3: check als je een bol kan verplaatsen naar een niveau hoger (zonder dat de andere dan een square kan maken)
+    private boolean tryToSabotageEnemySquare(PylosGameIF game, PylosBoard board) {
+        boolean moved = false;
 
-        //Stap 4: zet een bol zodanig dat jij de keer erna een vierkant kan maken (of bijna)
-
+        List<PylosSquare> squaresToSabotage = getPossibleCompleteEnemySquares(board);
+        if(!squaresToSabotage.isEmpty()){
+            moved = makeOrSabotageBestSquareFromList(game, board, squaresToSabotage);
+        }
+        return moved;
     }
 
     @Override
@@ -110,7 +124,7 @@ public class StudentPlayerBestFit extends PylosPlayer{
 
     }
 
-    private PylosSphere squareOnBoardMovable(PylosBoard board, PylosLocation location){
+    private PylosSphere getMovableSquareFromBoardTo(PylosBoard board, PylosLocation location){
         PylosSphere movingSphere = null;
         for (PylosSphere sphere : board.getSpheres(this)){
             if(!sphere.isReserve() && sphere.canMoveTo(location)){
@@ -152,17 +166,6 @@ public class StudentPlayerBestFit extends PylosPlayer{
         }
 
         return squares;
-    }
-
-    private PylosLocation getLocationToMakeSquare(PylosGameIF game, PylosBoard board) {
-        for(PylosSquare ps: board.getAllSquares()) {
-            if(ps.getInSquare(this) == 3) {
-                for(PylosLocation pl: ps.getLocations()) {
-                    if(board.getReserve(this).canMoveTo(pl)) return pl;
-                }
-            }
-        }
-        return null;
     }
 
     // initializing the map that contains the score per sphere and save the first board
