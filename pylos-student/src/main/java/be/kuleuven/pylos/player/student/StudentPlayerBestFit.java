@@ -13,6 +13,9 @@ public class StudentPlayerBestFit extends PylosPlayer{
     private Map< PylosSphere, Integer > scoreMap;
     private boolean initialized=false;
     private PylosBoard previousBoard;
+    private PylosPlayerColor enemyColor;
+
+    private final int reserveScore = 80;
 
     // check** globale map: key= sphere , value = score // optioneel: 2 scores, verliezend of winnend
     // check** (ben niet zeker of dit nodig is)+(java gebruikt pass by copy bij argumenten) globale Board opslaan, en iedere locatie vergelijkt met de vorige -> nieuwe scores
@@ -23,6 +26,61 @@ public class StudentPlayerBestFit extends PylosPlayer{
     public void doMove(PylosGameIF game, PylosBoard board) {
 
         if (!initialized)initializeScore(board);
+        calculateAllScores(board);
+
+        //for insurance that we always move a sphere
+        PylosSphere movingSphere = board.getReserve(this);
+        PylosLocation movingLocation = null;
+
+        //step 1
+        //Check if we are losing or winning
+        boolean winning = false;
+        if(board.getReservesSize(this) >= board.getReservesSize(enemyColor))winning=true;
+
+        if(winning){
+            //check 1 : can we make our own square?
+            List<PylosSquare> squares = getPossibleCompleteOwnSquares(board);
+            if(!squares.isEmpty()){
+
+                // step 1 : can we make a square by moving a ball on the board?
+                PylosSphere tempSphere = movingSphere;
+                PylosLocation tempLocation = movingLocation;
+
+                for(PylosSquare square: squares){
+                    for(PylosLocation location : square.getLocations()){
+                        tempSphere = squareOnBoardMovable(board, location);
+                        if(tempSphere != null) tempLocation = location;
+                    }
+                    if(tempSphere != null) {
+                        if (scoreMap.get(tempSphere) < scoreMap.get(movingSphere)) {
+                            movingSphere = tempSphere;
+                            movingLocation = tempLocation;
+                        }
+                    }
+                }
+
+                //step 2 : we fill a random square
+                for(PylosLocation location : squares.get(0).getLocations()){
+                    if(movingSphere.canMoveTo(location))movingLocation=location;
+                }
+
+                game.moveSphere(movingSphere, movingLocation);
+
+            }
+            //check 2 : can we undermine an enemy square
+            else {
+                squares = getPossibleCompleteEnemySquares(board);
+                if(!squares.isEmpty()){
+
+                }
+            }
+        }
+        //if we are not winning prioritize the undermining the enemy
+        else {
+
+        }
+        //3 onderdelen : 1- kijken of we aan het winnen zijn 2- zo ja is er een bol die al op het veld ligt en naar boven kan 3- anders een uit reserve
+
 
         //Stap 1: check als je een vierkant kan maken
         PylosLocation pl = getLocationToMakeSquare(game, board);
@@ -42,12 +100,57 @@ public class StudentPlayerBestFit extends PylosPlayer{
 
     @Override
     public void doRemove(PylosGameIF game, PylosBoard board) {
+        calculateAllScores(board);
 
     }
 
     @Override
     public void doRemoveOrPass(PylosGameIF game, PylosBoard board) {
 
+    }
+
+    private PylosSphere squareOnBoardMovable(PylosBoard board, PylosLocation location){
+        PylosSphere movingSphere = null;
+        for (PylosSphere sphere : board.getSpheres(this)){
+            if(!sphere.isReserve() && sphere.canMoveTo(location)){
+                if(movingSphere != null){
+                    if(scoreMap.get(sphere) < scoreMap.get(movingSphere)){
+                        movingSphere=sphere;
+                    }
+                }else{
+                    movingSphere = sphere;
+                }
+
+            }
+        }
+        return movingSphere;
+    }
+
+
+    //check for the squares that are almost complete (own color)
+    private List<PylosSquare> getPossibleCompleteOwnSquares(PylosBoard board) {
+        List<PylosSquare> squares = new ArrayList<>();
+
+        for (PylosSquare square : board.getAllSquares()) {
+            if (square.getInSquare(this) == 3) {
+                squares.add(square);
+            }
+        }
+
+        return squares;
+    }
+
+    //check for the squares that are almost complete (enemy color)
+    private List<PylosSquare> getPossibleCompleteEnemySquares(PylosBoard board) {
+        List<PylosSquare> squares = new ArrayList<>();
+
+        for (PylosSquare square : board.getAllSquares()) {
+            if (square.getInSquare(enemyColor) == 3) {
+                squares.add(square);
+            }
+        }
+
+        return squares;
     }
 
     private PylosLocation getLocationToMakeSquare(PylosGameIF game, PylosBoard board) {
@@ -64,14 +167,17 @@ public class StudentPlayerBestFit extends PylosPlayer{
     // initializing the map that contains the score per sphere and save the first board
     private void initializeScore(PylosBoard board){
 
-        int reserveScore = 30;
-
         scoreMap = new HashMap<>();
         PylosSphere[] mySpheres = board.getSpheres(this);
 
         for(PylosSphere sphere: mySpheres){
             scoreMap.put(sphere,reserveScore);
         }
+
+        //Checking what the color of the enemy is
+        if(this.PLAYER_COLOR == PylosPlayerColor.LIGHT){
+            enemyColor=PylosPlayerColor.DARK;
+        }else enemyColor=PylosPlayerColor.LIGHT;
 
         previousBoard = board;
         initialized = true;
@@ -88,7 +194,7 @@ public class StudentPlayerBestFit extends PylosPlayer{
     /*gives a score to a sphere
     higher score = better placement
 
-    reserve = 30
+    reserve = 85        // min score is 50
 
     own spheres --> n*n*15 + 30
 
@@ -128,12 +234,6 @@ public class StudentPlayerBestFit extends PylosPlayer{
         int enemySpheres;
         int ownSpheres;
         int height = sphere.getLocation().Z;
-
-        //Checking what the color of the enemy is
-        PylosPlayerColor enemyColor;
-        if(this.PLAYER_COLOR == PylosPlayerColor.LIGHT){
-            enemyColor=PylosPlayerColor.DARK;
-        }else enemyColor=PylosPlayerColor.LIGHT;
 
         //Add the score for each square
         for(PylosSquare square : goodSquares){
