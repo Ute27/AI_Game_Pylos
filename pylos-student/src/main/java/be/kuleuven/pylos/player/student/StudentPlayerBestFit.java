@@ -8,10 +8,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class StudentPlayerBestFit extends PylosPlayer{
+public class StudentPlayerBestFit extends PylosPlayer {
 
-    private Map< PylosSphere, Integer > scoreMap;
-    private boolean initialized=false;
+    private Map<PylosSphere, Integer> scoreMap;
+    private boolean initialized = false;
     private PylosBoard previousBoard;
     private PylosPlayerColor enemyColor;
 
@@ -26,26 +26,25 @@ public class StudentPlayerBestFit extends PylosPlayer{
     public void doMove(PylosGameIF game, PylosBoard board) {
 
         //Initialize method will have saved the previous board and checked which color this player is + added spheres to map
-        if (!initialized)initializeScore(board);
+        if (!initialized) initializeScore(board);
         //TODO we moeten het previousboard gebruiken zodat we een updateScores kunnen doen en de scores niet iedere keer allemaal moeten herberekenen.
         calculateAllScores(board);
 
         //step 1
         //Check if we are losing or winning and depending on this info, check for own square first or enemy square first
         boolean winning = false;
-        if(board.getReservesSize(this) >= board.getReservesSize(enemyColor))winning=true;
+        if (board.getReservesSize(this) >= board.getReservesSize(enemyColor)) winning = true;
         boolean moved = false;
 
         //3 onderdelen : 1- kijken of we aan het winnen zijn 2- zo ja is er een bol die al op het veld ligt en naar boven kan 3- anders een uit reserve
 
         //STEP 1: check for squares (yours or your enemies first depending on winning)
-        if(winning){
+        if (winning) {
             moved = tryToMakeOwnSquare(game, board);
-            if(!moved) moved = tryToSabotageEnemySquare(game, board);
-        }
-        else {
+            if (!moved) moved = tryToSabotageEnemySquare(game, board);
+        } else {
             moved = tryToSabotageEnemySquare(game, board);
-            if(!moved) moved = tryToMakeOwnSquare(game, board);
+            if (!moved) moved = tryToMakeOwnSquare(game, board);
         }
 
         //STEP 2: put the sphere somewhere near most other spheres
@@ -55,62 +54,6 @@ public class StudentPlayerBestFit extends PylosPlayer{
         //TODO: ik zou hier de beste plek proberen zoeken ook door een scoresysteem? Dus hier eens berekenen enkel voor lege, legbare plekken. Hogere score hoe meer bollen van eenzelfde kleur er naast liggen en we willen een bol leggen op de hoogste score.
 
 
-    }
-
-    private boolean tryToMakeOwnSquare(PylosGameIF game, PylosBoard board) {
-        boolean moved = false;
-
-        //check 1 : can we make our own square?
-        List<PylosSquare> squaresToComplete = getPossibleCompleteOwnSquares(board);
-        if(!squaresToComplete.isEmpty()){
-            moved = makeOrSabotageBestSquareFromList(game, board, squaresToComplete);
-        }
-
-        return moved;
-    }
-
-    private boolean makeOrSabotageBestSquareFromList(PylosGameIF game, PylosBoard board, List<PylosSquare> doableSquares) {
-        //Initialize moving values, should be overwrited anyway
-        //TODO: wat doen we als de reservelijst op is? Er is een kans dat er gewoon geen zet mogelijk is?
-        PylosSphere movingSphere = board.getReserve(this);
-        PylosLocation movingLocation = null;
-
-        // step 1 : can we make a square by moving a ball on the board?
-        PylosSphere tempSphere = movingSphere;
-        PylosLocation tempLocation = movingLocation;
-
-        for(PylosSquare square: doableSquares){
-            for(PylosLocation location : square.getLocations()){
-                tempSphere = getMovableSquareFromBoardTo(board, location);
-                if(tempSphere != null) tempLocation = location;
-            }
-            //check: did we get even one square where we can make it with a sphere from the board?
-            if(tempSphere != null) {
-                //If this best tempSphere from the board has a lower score than movingsphere, we will use it
-                if (scoreMap.get(tempSphere) < scoreMap.get(movingSphere)) {
-                    movingSphere = tempSphere;
-                    movingLocation = tempLocation;
-                }
-            }
-        }
-
-        //step 2 : we fill the square that we just chose
-        if(movingSphere.canMoveTo(movingLocation)){
-            game.moveSphere(movingSphere, movingLocation);
-            return true;
-        }
-
-        return false;
-    }
-
-    private boolean tryToSabotageEnemySquare(PylosGameIF game, PylosBoard board) {
-        boolean moved = false;
-
-        List<PylosSquare> squaresToSabotage = getPossibleCompleteEnemySquares(board);
-        if(!squaresToSabotage.isEmpty()){
-            moved = makeOrSabotageBestSquareFromList(game, board, squaresToSabotage);
-        }
-        return moved;
     }
 
     @Override
@@ -124,15 +67,71 @@ public class StudentPlayerBestFit extends PylosPlayer{
 
     }
 
-    private PylosSphere getMovableSquareFromBoardTo(PylosBoard board, PylosLocation location){
+    private boolean tryToMakeOwnSquare(PylosGameIF game, PylosBoard board) {
+        boolean moved = false;
+
+        //check 1 : can we make our own square?
+        List<PylosSquare> squaresToComplete = getPossibleCompleteOwnSquares(board);
+        if (!squaresToComplete.isEmpty()) {
+            moved = makeOrSabotageBestSquareFromList(game, board, squaresToComplete);
+        }
+
+        return moved;
+    }
+
+    private boolean tryToSabotageEnemySquare(PylosGameIF game, PylosBoard board) {
+        boolean moved = false;
+
+        List<PylosSquare> squaresToSabotage = getPossibleCompleteEnemySquares(board);
+        if (!squaresToSabotage.isEmpty()) {
+            moved = makeOrSabotageBestSquareFromList(game, board, squaresToSabotage);
+        }
+        return moved;
+    }
+
+    private boolean makeOrSabotageBestSquareFromList(PylosGameIF game, PylosBoard board, List<PylosSquare> doableSquares) {
+        //Initialize moving values, should be overwrited anyway
+        //TODO: wat doen we als de reservelijst op is? Er is een kans dat er gewoon geen zet mogelijk is?
+        PylosSphere movingSphere = board.getReserve(this);
+        PylosLocation movingLocation = null;
+
+        // step 1 : can we make a square by moving a ball on the board?
+        PylosSphere tempSphere = movingSphere;
+        PylosLocation tempLocation = movingLocation;
+
+        for (PylosSquare square : doableSquares) {
+            for (PylosLocation location : square.getLocations()) {
+                tempSphere = getMovableSquareFromBoardTo(board, location);
+                if (tempSphere != null) tempLocation = location;
+            }
+            //check: did we get even one square where we can make it with a sphere from the board?
+            if (tempSphere != null) {
+                //If this best tempSphere from the board has a lower score than movingsphere, we will use it
+                if (scoreMap.get(tempSphere) < scoreMap.get(movingSphere)) {
+                    movingSphere = tempSphere;
+                    movingLocation = tempLocation;
+                }
+            }
+        }
+
+        //step 2 : we fill the square that we just chose
+        if (movingSphere.canMoveTo(movingLocation)) {
+            game.moveSphere(movingSphere, movingLocation);
+            return true;
+        }
+
+        return false;
+    }
+
+    private PylosSphere getMovableSquareFromBoardTo(PylosBoard board, PylosLocation location) {
         PylosSphere movingSphere = null;
-        for (PylosSphere sphere : board.getSpheres(this)){
-            if(!sphere.isReserve() && sphere.canMoveTo(location)){
-                if(movingSphere != null){
-                    if(scoreMap.get(sphere) < scoreMap.get(movingSphere)){
-                        movingSphere=sphere;
+        for (PylosSphere sphere : board.getSpheres(this)) {
+            if (!sphere.isReserve() && sphere.canMoveTo(location)) {
+                if (movingSphere != null) {
+                    if (scoreMap.get(sphere) < scoreMap.get(movingSphere)) {
+                        movingSphere = sphere;
                     }
-                }else{
+                } else {
                     movingSphere = sphere;
                 }
 
@@ -169,29 +168,29 @@ public class StudentPlayerBestFit extends PylosPlayer{
     }
 
     // initializing the map that contains the score per sphere and save the first board
-    private void initializeScore(PylosBoard board){
+    private void initializeScore(PylosBoard board) {
 
         scoreMap = new HashMap<>();
         PylosSphere[] mySpheres = board.getSpheres(this);
 
-        for(PylosSphere sphere: mySpheres){
-            scoreMap.put(sphere,reserveScore);
+        for (PylosSphere sphere : mySpheres) {
+            scoreMap.put(sphere, reserveScore);
         }
 
         //Checking what the color of the enemy is
-        if(this.PLAYER_COLOR == PylosPlayerColor.LIGHT){
-            enemyColor=PylosPlayerColor.DARK;
-        }else enemyColor=PylosPlayerColor.LIGHT;
+        if (this.PLAYER_COLOR == PylosPlayerColor.LIGHT) {
+            enemyColor = PylosPlayerColor.DARK;
+        } else enemyColor = PylosPlayerColor.LIGHT;
 
         previousBoard = board;
         initialized = true;
     }
 
     //calculate the new scores for all our spheres on the board
-    private void calculateAllScores(PylosBoard board){
+    private void calculateAllScores(PylosBoard board) {
         PylosSphere[] mySpheres = board.getSpheres(this);
-        for(PylosSphere sphere : mySpheres){
-            evaluationFunction(sphere,board);
+        for (PylosSphere sphere : mySpheres) {
+            evaluationFunction(sphere, board);
         }
     }
 
@@ -217,13 +216,13 @@ public class StudentPlayerBestFit extends PylosPlayer{
 
     height bal = z * 30          z is goed want we willen liever een bal van de onderste laag naar een bovenste leggen dan eentje halen uit reserve dus geen extra punten voor eerste layer
      */
-    private void evaluationFunction(PylosSphere sphere, PylosBoard board){
+    private void evaluationFunction(PylosSphere sphere, PylosBoard board) {
 
         /*
                 STEP 1: If the sphere is still in the reserve, we will not need to calculate a score.
          */
-        if(sphere.isReserve()) {
-            scoreMap.replace(sphere , reserveScore);
+        if (sphere.isReserve()) {
+            scoreMap.replace(sphere, reserveScore);
             return;
         }
 
@@ -234,14 +233,14 @@ public class StudentPlayerBestFit extends PylosPlayer{
 
         //searches the squares where the sphere is in; min 1 , max 4
         //TODO: mogelijke verbetering qua snelheid: je checkt van elke square maar 1 locatie en pas als die max 1 verschilt qua coordinaten met eigen locatie, kijk je naar de rest. Gaat wel enkel beter zijn bij grotere spelborden
-        for(PylosSquare square : board.getAllSquares()){
-            for(PylosLocation location : square.getLocations()){
-                if(sphere.getLocation() == location){
+        for (PylosSquare square : board.getAllSquares()) {
+            for (PylosLocation location : square.getLocations()) {
+                if (sphere.getLocation() == location) {
                     goodSquares.add(square);
                     break;
                 }
             }
-            if(goodSquares.size()==4)break;
+            if (goodSquares.size() == 4) break;
         }
 
         // after the squares are found calculate the new score
@@ -252,19 +251,19 @@ public class StudentPlayerBestFit extends PylosPlayer{
         int height = sphere.getLocation().Z;
 
         //Add the score for each square
-        for(PylosSquare square : goodSquares){
+        for (PylosSquare square : goodSquares) {
             enemySpheres = square.getInSquare(enemyColor);
             ownSpheres = square.getInSquare(this.PLAYER_COLOR);
-            score += (enemySpheres * enemySpheres * 15 +20);
+            score += (enemySpheres * enemySpheres * 15 + 20);
             //If ownSpheres is 4, there already is a square of own color so it would be best to remove this sphere if possible in order to remake the square
-            if(ownSpheres!=4) {
-                score += (ownSpheres-1) * (ownSpheres-1) * 15 + 30;
+            if (ownSpheres != 4) {
+                score += (ownSpheres - 1) * (ownSpheres - 1) * 15 + 30;
             }
 
         }
         score += height * 30;
 
-        scoreMap.replace(sphere , score);
+        scoreMap.replace(sphere, score);
 
     }
 }
