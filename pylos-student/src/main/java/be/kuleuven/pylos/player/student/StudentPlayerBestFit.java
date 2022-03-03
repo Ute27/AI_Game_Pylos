@@ -27,10 +27,16 @@ public class StudentPlayerBestFit extends PylosPlayer {
     public void doMove(PylosGameIF game, PylosBoard board) {
 
         //Initialize method will have saved the previous board and checked which color this player is + added spheres to map
-        if (!initialized) initializeScore(board);
+        if (!initialized) {
+            initializeScore(board);
+            calculateAllScores(board);
+        }
+        else{
+            updateAllScores(board);
+        }
         //TODO we moeten het previousboard gebruiken zodat we een updateScores kunnen doen en de scores niet iedere keer allemaal moeten herberekenen.
         //TODO antwoord: ik denk eigenlijk niet dat dit sneller zou zijn dan alle scores op het veld te berekenen, dit zouden we dan kunnen testen
-        calculateAllScores(board);
+
 
         //step 1
         //Check if we are losing or winning and depending on this info, check for own square first or enemy square first
@@ -55,13 +61,18 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         //TODO: ik zou hier de beste plek proberen zoeken ook door een scoresysteem? Dus hier eens berekenen enkel voor lege, legbare plekken. Hogere score hoe meer bollen van eenzelfde kleur er naast liggen en we willen een bol leggen op de hoogste score.
         //TODO: ik dacht hiervoor die simulatie te kunnen gebruiken en dan de bal te plaatsen waar hij de hoogste score zou krijgen. Maar weet nog niet goed hoe wat met die simulatie mogelijk is
+        //Antwoord: Die simulatie vertelt ons alleen maar of onze speler wint of verliest he? We kunnen de speler niet een beslissing laten nemen adhv die simulatie tenzij je een hard coded variabele aanpast en in uw simulatie kijkt welk effect het heeft, maar we kunnen dat niet doen in het geval van "een plek zoeken om de bal te leggen" omdat het spelbord er telkens anders uitziet... denk ik he
 
+        if(!moved) {
+            //Update het placingscoresysteem dat scores geeft aan locaties ipv spheres
+        }
+
+        previousBoard = board;
     }
 
     @Override
     public void doRemove(PylosGameIF game, PylosBoard board) {
-        //OPM: als we doorgestuurd werden van de methode doRemoveOrPass, moeten we al die scores niet berekenen (gaat eigenlijk al opgelost worden als we calculateScores vervangen door UpdateScores)
-        calculateAllScores(board);
+        updateAllScores(board);
         int minimalScore = reserveScore;
         PylosSphere sphereToMove = board.getReserve(this);
         for(PylosSphere sphere: board.getSpheres(this)) {
@@ -73,12 +84,13 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         //Remove the sphere
         game.removeSphere(sphereToMove);
+        previousBoard = board;
 
     }
 
     @Override
     public void doRemoveOrPass(PylosGameIF game, PylosBoard board) {
-        calculateAllScores(board);
+        updateAllScores(board);
         boolean remove = false;
         for(PylosSphere sphere: board.getSpheres(this)) {
             if(scoreMap.get(sphere)<=tresholdToRemove) {
@@ -290,5 +302,40 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         scoreMap.replace(sphere, score);
 
+    }
+
+    private void updateAllScores(PylosBoard board) {
+        PylosLocation[] locationsNow = board.getLocations();
+        PylosLocation[] locationsPrev = previousBoard.getLocations();
+        for(int i=0; i<locationsNow.length; i++) {
+            PylosSphere currentSphere = locationsNow[i].getSphere();
+            PylosSphere oldSphere = locationsPrev[i].getSphere();
+            if (currentSphere!=oldSphere) {
+                //Option 1 the sphere was removed
+                if(currentSphere == null) {
+                    scoreMap.replace(oldSphere, reserveScore);
+                    for(PylosSquare neighbourSquare: oldSphere.getLocation().getSquares()) {
+                        for(PylosLocation neighbourLocation: neighbourSquare.getLocations()) {
+                            if(neighbourLocation.isUsed()) {
+                                PylosSphere neighbourSphere = neighbourLocation.getSphere();
+                                evaluationFunction(neighbourSphere, board);
+                            }
+                        }
+                    }
+                }
+
+                //Option 2 the sphere was placed
+                if(oldSphere == null) {
+                    for(PylosSquare neighbourSquare: currentSphere.getLocation().getSquares()) {
+                        for(PylosLocation neighbourLocation: neighbourSquare.getLocations()) {
+                            if(neighbourLocation.isUsed()) {
+                                PylosSphere neighbourSphere = neighbourLocation.getSphere();
+                                evaluationFunction(neighbourSphere, board);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
