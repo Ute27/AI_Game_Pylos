@@ -10,11 +10,13 @@ import java.util.Map;
 
 public class StudentPlayerBestFit extends PylosPlayer {
 
-    private Map<PylosSphere, Integer> scoreMap;
+    private Map<PylosSphere, Integer> scoreMapSpheres;
+    private Map<PylosLocation, Integer> scoreMapLocations;
     private boolean initialized = false;
     private PylosBoard previousBoard;
     private PylosPlayerColor enemyColor;
     private int tresholdToRemove = 100;
+    private int valueHeightInLocationScore = 20;
 
     private final int reserveScore = 150;
 
@@ -29,14 +31,14 @@ public class StudentPlayerBestFit extends PylosPlayer {
         //Initialize method will have saved the previous board and checked which color this player is + added spheres to map
         if (!initialized) {
             initializeScore(board);
+        }
+        else if(scoreMapSpheres==null){
+            //OPM: in een normaal scenario gaat de scoreMapSpheres niet verloren en gebruiken we de calculateAllScores nooit
             calculateAllScores(board);
         }
-        else{
+        else {
             updateAllScores(board);
         }
-        //TODO we moeten het previousboard gebruiken zodat we een updateScores kunnen doen en de scores niet iedere keer allemaal moeten herberekenen.
-        //TODO antwoord: ik denk eigenlijk niet dat dit sneller zou zijn dan alle scores op het veld te berekenen, dit zouden we dan kunnen testen
-
 
         //step 1
         //Check if we are losing or winning and depending on this info, check for own square first or enemy square first
@@ -59,12 +61,27 @@ public class StudentPlayerBestFit extends PylosPlayer {
         //Mogelijke verbeteringen hier: kijken als je bvb drie bollen dicht bij elkaar hebt en met 1 te zetten, 2 mogelijke square makings creeert
         //Idem bij enemy en zo een plek proberen saboteren
 
-        //TODO: ik zou hier de beste plek proberen zoeken ook door een scoresysteem? Dus hier eens berekenen enkel voor lege, legbare plekken. Hogere score hoe meer bollen van eenzelfde kleur er naast liggen en we willen een bol leggen op de hoogste score.
-        //TODO: ik dacht hiervoor die simulatie te kunnen gebruiken en dan de bal te plaatsen waar hij de hoogste score zou krijgen. Maar weet nog niet goed hoe wat met die simulatie mogelijk is
-        //Antwoord: Die simulatie vertelt ons alleen maar of onze speler wint of verliest he? We kunnen de speler niet een beslissing laten nemen adhv die simulatie tenzij je een hard coded variabele aanpast en in uw simulatie kijkt welk effect het heeft, maar we kunnen dat niet doen in het geval van "een plek zoeken om de bal te leggen" omdat het spelbord er telkens anders uitziet... denk ik he
+        //Opmerking Ute: ik zou hier de beste plek proberen zoeken ook door een scoresysteem? Dus hier eens berekenen enkel voor lege, legbare plekken. Hogere score hoe meer bollen van eenzelfde kleur er naast liggen en we willen een bol leggen op de hoogste score.
+        //Antwoord Sam: ik dacht hiervoor die simulatie te kunnen gebruiken en dan de bal te plaatsen waar hij de hoogste score zou krijgen. Maar weet nog niet goed hoe wat met die simulatie mogelijk is
+        //Antwoord Ute: Die simulatie vertelt ons alleen maar of onze speler wint of verliest he? We kunnen de speler niet een beslissing laten nemen adhv die simulatie tenzij je een hard coded variabele aanpast en in uw simulatie kijkt welk effect het heeft, maar we kunnen dat niet doen in het geval van "een plek zoeken om de bal te leggen" omdat het spelbord er telkens anders uitziet... denk ik he
 
         if(!moved) {
             //Update het placingscoresysteem dat scores geeft aan locaties ipv spheres
+            PylosLocation locationToMoveTo = board.getLocations()[0];
+            int maxScore = 0;
+            for(PylosLocation location: board.getLocations()) {
+                if(location.isUsable() && scoreMapLocations.get(location)>maxScore) {
+                    locationToMoveTo = location;
+                }
+            }
+            PylosSphere sphereToMove = board.getReserve(this);
+            int minScore = reserveScore;
+            for(PylosSphere sphere: board.getSpheres(this)) {
+                if(sphere.canMoveTo(locationToMoveTo) && scoreMapSpheres.get(sphere)<=minScore) {
+                    sphereToMove = sphere;
+                }
+            }
+            game.moveSphere(sphereToMove, locationToMoveTo);
         }
 
         previousBoard = board;
@@ -76,8 +93,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
         int minimalScore = reserveScore;
         PylosSphere sphereToMove = board.getReserve(this);
         for(PylosSphere sphere: board.getSpheres(this)) {
-            if(scoreMap.get(sphere)<minimalScore) {
-                minimalScore = scoreMap.get(sphere);
+            if(scoreMapSpheres.get(sphere)<minimalScore) {
+                minimalScore = scoreMapSpheres.get(sphere);
                 sphereToMove = sphere;
             }
         }
@@ -93,7 +110,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         updateAllScores(board);
         boolean remove = false;
         for(PylosSphere sphere: board.getSpheres(this)) {
-            if(scoreMap.get(sphere)<=tresholdToRemove) {
+            if(scoreMapSpheres.get(sphere)<=tresholdToRemove) {
                 remove = true;
             }
         }
@@ -144,7 +161,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
             //check: did we get even one square where we can make it with a sphere from the board?
             if (tempSphere != null) {
                 //If this best tempSphere from the board has a lower score than movingsphere, we will use it
-                if (scoreMap.get(tempSphere) < scoreMap.get(movingSphere)) {
+                if (scoreMapSpheres.get(tempSphere) < scoreMapSpheres.get(movingSphere)) {
                     movingSphere = tempSphere;
                     movingLocation = tempLocation;
                 }
@@ -165,7 +182,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         for (PylosSphere sphere : board.getSpheres(this)) {
             if (!sphere.isReserve() && sphere.canMoveTo(location)) {
                 if (movingSphere != null) {
-                    if (scoreMap.get(sphere) < scoreMap.get(movingSphere)) {
+                    if (scoreMapSpheres.get(sphere) < scoreMapSpheres.get(movingSphere)) {
                         movingSphere = sphere;
                     }
                 } else {
@@ -207,11 +224,15 @@ public class StudentPlayerBestFit extends PylosPlayer {
     // initializing the map that contains the score per sphere and save the first board
     private void initializeScore(PylosBoard board) {
 
-        scoreMap = new HashMap<>();
+        scoreMapSpheres = new HashMap<>();
+        scoreMapLocations = new HashMap<>();
         PylosSphere[] mySpheres = board.getSpheres(this);
 
         for (PylosSphere sphere : mySpheres) {
-            scoreMap.put(sphere, reserveScore);
+            scoreMapSpheres.put(sphere, reserveScore);
+        }
+        for(PylosLocation location: board.getLocations()) {
+            scoreMapLocations.put(location, location.Z*valueHeightInLocationScore);
         }
 
         //Checking what the color of the enemy is
@@ -231,7 +252,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
             // If the sphere is still in the reserve, we will not need to calculate a score.
             if (!sphere.isReserve()) {
-                evaluationFunction(sphere, board);
+                evaluationFunctionSphere(sphere, board);
 
             }
 
@@ -260,7 +281,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
     height bal = z * 30
      */
-    private void evaluationFunction(PylosSphere sphere, PylosBoard board) {
+    private void evaluationFunctionSphere(PylosSphere sphere, PylosBoard board) {
 
         /*
                 STEP 2: Looking for squares in which the sphere is located
@@ -300,8 +321,28 @@ public class StudentPlayerBestFit extends PylosPlayer {
         }
         score += height * 30;
 
-        scoreMap.replace(sphere, score);
+        scoreMapSpheres.replace(sphere, score);
 
+    }
+
+    private void evaluationFunctionLocation(PylosLocation givenLocation, PylosBoard board) {
+        int score = 0;
+        int ourAlmostSquares=0;
+        int enemyAlmostSquares=0;
+        for(PylosSquare square: givenLocation.getSquares()) {
+            //OPM: bollen die horizontaal/verticaal naast onze locatie liggen, worden dubbel geteld in vergelijking met bollen die diagonaal liggne
+            //Dit is goed omdat we sws een horizontale/verticale buur nodig hebben om een bol te leggene daar waar je plots 2 vierkanten kan maken in de volgende beurt
+            int ourSpheresInSquare = square.getInSquare(this);
+            int enemySpheresInSquare = square.getInSquare(enemyColor);
+            score+= ourSpheresInSquare+enemySpheresInSquare;
+            if(ourSpheresInSquare==2) ourAlmostSquares++;
+            if(enemySpheresInSquare==2) enemyAlmostSquares++;
+        }
+        //bonus points: als we met één zet ervoor kunnen zorgen dat je op 2 plekken een vierkant gaat kunnen leggen
+        score+=(ourAlmostSquares-1)*3;
+        score+=(enemyAlmostSquares-1)*2;
+
+        scoreMapLocations.replace(givenLocation, score);
     }
 
     private void updateAllScores(PylosBoard board) {
@@ -313,12 +354,15 @@ public class StudentPlayerBestFit extends PylosPlayer {
             if (currentSphere!=oldSphere) {
                 //Option 1 the sphere was removed
                 if(currentSphere == null) {
-                    scoreMap.replace(oldSphere, reserveScore);
+                    scoreMapSpheres.replace(oldSphere, reserveScore);
                     for(PylosSquare neighbourSquare: oldSphere.getLocation().getSquares()) {
                         for(PylosLocation neighbourLocation: neighbourSquare.getLocations()) {
                             if(neighbourLocation.isUsed()) {
                                 PylosSphere neighbourSphere = neighbourLocation.getSphere();
-                                evaluationFunction(neighbourSphere, board);
+                                evaluationFunctionSphere(neighbourSphere, board);
+                            }
+                            else{
+                                evaluationFunctionLocation(neighbourLocation, board);
                             }
                         }
                     }
@@ -330,7 +374,10 @@ public class StudentPlayerBestFit extends PylosPlayer {
                         for(PylosLocation neighbourLocation: neighbourSquare.getLocations()) {
                             if(neighbourLocation.isUsed()) {
                                 PylosSphere neighbourSphere = neighbourLocation.getSphere();
-                                evaluationFunction(neighbourSphere, board);
+                                evaluationFunctionSphere(neighbourSphere, board);
+                            }
+                            else {
+                                evaluationFunctionLocation(neighbourLocation, board);
                             }
                         }
                     }
