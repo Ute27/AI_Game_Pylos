@@ -14,6 +14,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private boolean initialized = false;
     private PylosBoard previousBoard;
     private PylosPlayerColor enemyColor;
+    private int tresholdToRemove = 100;
 
     private final int reserveScore = 150;
 
@@ -59,12 +60,34 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
     @Override
     public void doRemove(PylosGameIF game, PylosBoard board) {
+        //OPM: als we doorgestuurd werden van de methode doRemoveOrPass, moeten we al die scores niet berekenen (gaat eigenlijk al opgelost worden als we calculateScores vervangen door UpdateScores)
         calculateAllScores(board);
+        int minimalScore = reserveScore;
+        PylosSphere sphereToMove = board.getReserve(this);
+        for(PylosSphere sphere: board.getSpheres(this)) {
+            if(scoreMap.get(sphere)<minimalScore) {
+                minimalScore = scoreMap.get(sphere);
+                sphereToMove = sphere;
+            }
+        }
+
+        //Remove the sphere
+        game.removeSphere(sphereToMove);
 
     }
 
     @Override
     public void doRemoveOrPass(PylosGameIF game, PylosBoard board) {
+        calculateAllScores(board);
+        boolean remove = false;
+        for(PylosSphere sphere: board.getSpheres(this)) {
+            if(scoreMap.get(sphere)<=tresholdToRemove) {
+                remove = true;
+            }
+        }
+        if(remove) {
+            doRemove(game, board);
+        }
 
     }
 
