@@ -103,8 +103,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
         //TODO: tijdelijke oplossing, wou gewoon de game verder kunnen spelen
         if(sphereToMove == null)game.pass();
 
-        //Remove the sphere
-        game.removeSphere(sphereToMove);
+        //Remove the sphere IF it is on the board
+        if(sphereToMove.getLocation()!=null)game.removeSphere(sphereToMove);
         previousBoard = board;
 
     }

@@ -17,7 +17,6 @@ import java.util.Random;
 public class PylosMain {
 
 	public PylosMain() {
-
 	}
 
 	public void startPerformanceBattles() {
@@ -52,7 +51,7 @@ public class PylosMain {
 	}
 
 	public void startBattle() {
-		PylosPlayer playerLight = new StudentPlayerRandomFit();
+		PylosPlayer playerLight = new StudentPlayerBestFit();
 		PylosPlayer playerDark = new PylosPlayerRandomFit();
 		Battle.play(playerLight, playerDark, 100);
 	}
