@@ -41,9 +41,9 @@ public class PylosMain {
 
 		Random random = new Random(0);
 
-		PylosPlayer randomPlayerCodes = new PylosPlayerRandomFit();
+		PylosPlayer randomPlayerCodes = new PylosPlayerBestFit();
 //		PylosPlayer randomPlayerCodes = new PylosPlayerMiniMax();
-		PylosPlayer randomPlayerStudent = new StudentPlayerRandomFit();
+		PylosPlayer randomPlayerStudent = new StudentPlayerBestFit();
 
 		PylosBoard pylosBoard = new PylosBoard();
 		PylosGame pylosGame = new PylosGame(pylosBoard, randomPlayerCodes, randomPlayerStudent, random, PylosGameObserver.CONSOLE_GAME_OBSERVER, PylosPlayerObserver.NONE);
