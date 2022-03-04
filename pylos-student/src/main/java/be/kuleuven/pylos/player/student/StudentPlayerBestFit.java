@@ -26,6 +26,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     // eigen vierkant of enemy vierkant? -> hangt ervan af hoeveel ballen in reserve zijn bij ons en de enemy
 
     //TODO: mischien conditie van winnen veranderen naar welke speler de hoogste totale score heeft?
+    //Antwoord Ute: Nee want als al uw bollen op goeie plekken vastliggen, maar ze liggen daar allemaal (je hebt geen reserve meer), ga je en hogere totale score hebben dus dat geeft een vertekend beeld
     //TODO: de vierkanten in de hoeken pikt hij niet op
     @Override
     public void doMove(PylosGameIF game, PylosBoard board) {
@@ -67,7 +68,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
             int maxScore = 0;
             for(PylosLocation location: board.getLocations()) {
                 if(location.isUsable() && scoreMapLocations.get(location)>maxScore) {
-                    System.out.println("changed: " + scoreMapLocations.get(location) +" "+ scoreMapLocations.get(locationToMoveTo));
+                    //System.out.println("changed: " + scoreMapLocations.get(location) +" "+ scoreMapLocations.get(locationToMoveTo));
                     maxScore = scoreMapLocations.get(location);
                     locationToMoveTo = location;
                 }
