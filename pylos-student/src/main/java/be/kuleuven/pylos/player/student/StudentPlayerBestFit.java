@@ -31,9 +31,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
         //Initialize method will have saved the previous board and checked which color this player is + added spheres to map
         if (!initialized) {
             initializeScore(board);
-        }
-        else if(scoreMapSpheres==null){
-            //OPM: in een normaal scenario gaat de scoreMapSpheres niet verloren en gebruiken we de calculateAllScores nooit
             calculateAllScores(board);
         }
         else {
@@ -335,12 +332,15 @@ public class StudentPlayerBestFit extends PylosPlayer {
             int ourSpheresInSquare = square.getInSquare(this);
             int enemySpheresInSquare = square.getInSquare(enemyColor);
             score+= ourSpheresInSquare+enemySpheresInSquare;
-            if(ourSpheresInSquare==2) ourAlmostSquares++;
-            if(enemySpheresInSquare==2) enemyAlmostSquares++;
+            if(ourSpheresInSquare==2 && enemySpheresInSquare==0) ourAlmostSquares++;
+            if(enemySpheresInSquare==2 && ourSpheresInSquare==0) enemyAlmostSquares++;
         }
         //bonus points: als we met één zet ervoor kunnen zorgen dat je op 2 plekken een vierkant gaat kunnen leggen
-        score+=(ourAlmostSquares-1)*3;
-        score+=(enemyAlmostSquares-1)*2;
+        score+=ourAlmostSquares*3;
+        score+=enemyAlmostSquares*2;
+
+        //Om ervoor te zorgen dat je in het begin start in het midden, hoe meer squares hoe beter
+        score+=givenLocation.getSquares().size();
 
         scoreMapLocations.replace(givenLocation, score);
     }
