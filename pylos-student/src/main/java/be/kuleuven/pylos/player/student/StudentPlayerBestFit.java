@@ -26,6 +26,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     // eigen vierkant of enemy vierkant? -> hangt ervan af hoeveel ballen in reserve zijn bij ons en de enemy
 
     //TODO: mischien conditie van winnen veranderen naar welke speler de hoogste totale score heeft?
+    //TODO: de vierkanten in de hoeken pikt hij niet op
     @Override
     public void doMove(PylosGameIF game, PylosBoard board) {
 
@@ -39,9 +40,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
         }
 
         calculateAllScores(board);
-        System.out.println(scoreMapSpheres.values());
-        System.out.println(scoreMapLocations.values());
-        System.out.println();
 
         //step 1
         //Check if we are losing or winning and depending on this info, check for own square first or enemy square first
@@ -91,24 +89,28 @@ public class StudentPlayerBestFit extends PylosPlayer {
     //Sam: in de huidige implementatie is er geen zekerheid dat er een bal uit het vierkant genomen wordt
     @Override
     public void doRemove(PylosGameIF game, PylosBoard board) {
+        calculateAllScores(board);
         updateAllScores(board);
         int minimalScore = reserveScore;
-        PylosSphere sphereToMove = board.getReserve(this);
+        PylosSphere sphereToMove = null;
         for(PylosSphere sphere: board.getSpheres(this)) {
-            if(scoreMapSpheres.get(sphere)<minimalScore) {
+            if(scoreMapSpheres.get(sphere)<=minimalScore) {
                 minimalScore = scoreMapSpheres.get(sphere);
                 sphereToMove = sphere;
             }
         }
+        //TODO: tijdelijke oplossing, wou gewoon de game verder kunnen spelen
+        if(sphereToMove == null)game.pass();
 
         //Remove the sphere
         game.removeSphere(sphereToMove);
         previousBoard = board;
 
     }
-    //TODO: da werkt hier nooit
+
     @Override
     public void doRemoveOrPass(PylosGameIF game, PylosBoard board) {
+        calculateAllScores(board);
         updateAllScores(board);
         boolean remove = false;
         for(PylosSphere sphere: board.getSpheres(this)) {
@@ -119,6 +121,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         if(remove) {
             doRemove(game, board);
         }
+        else game.pass();
 
     }
 
