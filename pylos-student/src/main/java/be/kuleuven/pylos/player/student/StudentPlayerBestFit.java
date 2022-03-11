@@ -30,6 +30,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private final int recursionDepth = 5;
     private PylosSphere sphereToMove=null;
     private PylosLocation locationToMove=null;
+    private boolean toRemoveFirst = false;
+    private boolean toRemoveSec = false;
     private boolean toPass = false;
     private int deltaScore = Integer.MIN_VALUE;
 
@@ -156,7 +158,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
             locationToMove = tempLocation;
             return tempDeltaScoreAllSpheres;
 
-            //TODO: sphere grootst verschil met reserve is het best;als het de eerste stap is dan kijken naar wat het best is
+
         }else if (prevState == PylosGameState.REMOVE_FIRST){
 
             for (PylosSphere sphere : board.getSpheres(color)) {
@@ -167,17 +169,22 @@ public class StudentPlayerBestFit extends PylosPlayer {
                     int tempDeltaScore = minMaxRecursie(game, board, depth, nextColor);
                     if (color == this.PLAYER_COLOR && tempDeltaScoreAllSpheres < tempDeltaScore) {
                         tempDeltaScoreAllSpheres = tempDeltaScore;
+                        tempSphere=sphere;
 
                     } else if (color == enemyColor && tempDeltaScoreAllSpheres >= tempDeltaScore) {
                         tempDeltaScoreAllSpheres = tempDeltaScore;
+
                     }
                     simulator.undoRemoveFirstSphere(sphere,prevLoc,prevState,color);
                 }
             }
+            if(depth==0){
+                toRemoveFirst = true;
+                sphereToMove=tempSphere;
+            }
 
             return tempDeltaScoreAllSpheres;
 
-            //TODO: verschile met reserve score
         }else if(prevState == PylosGameState.REMOVE_SECOND){
             calculateAllScores(board);
             tempDeltaScoreAllSpheres = totalOwnScore - totalEnemyScore;
@@ -188,9 +195,9 @@ public class StudentPlayerBestFit extends PylosPlayer {
                     calculateAllScores(board);
 
                     int tempDeltaScore = minMaxRecursie(game, board, depth, nextColor);
-
                     if (color == this.PLAYER_COLOR && tempDeltaScoreAllSpheres < tempDeltaScore) {
                         tempDeltaScoreAllSpheres = tempDeltaScore;
+                        tempSphere=sphere;
                     } else if (color == enemyColor && tempDeltaScoreAllSpheres >= tempDeltaScore) {
                         tempDeltaScoreAllSpheres = tempDeltaScore;
                     }
@@ -208,17 +215,24 @@ public class StudentPlayerBestFit extends PylosPlayer {
             } else if (color == enemyColor && tempDeltaScoreAllSpheres >= tempDeltaScore) {
                 tempDeltaScoreAllSpheres = tempDeltaScore;
             }
+            else {
+                toRemoveSec=true;
+                sphereToMove=tempSphere;
+            }
+
             simulator.undoPass(prevState,color);
 
             return tempDeltaScoreAllSpheres;
+
         }else if(prevState== PylosGameState.COMPLETED){
             if(simulator.getWinner() == this.PLAYER_COLOR){
                 return Integer.MAX_VALUE;
             }else {
                 return totalOwnScore - totalEnemyScore;
             }
+        }else if(prevState== PylosGameState.DRAW){
+            return totalOwnScore - totalEnemyScore;
         }else return Integer.MIN_VALUE;
-
     }
 
     //TODO: da werkt hier maar heel soms
