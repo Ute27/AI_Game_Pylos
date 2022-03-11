@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static be.kuleuven.pylos.game.PylosGameState.MOVE;
+
 public class StudentPlayerBestFit extends PylosPlayer {
 
     private Map<PylosSphere, Integer> scoreMapSpheresOwn;
@@ -93,6 +95,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         previousBoard = board;
     }
 
+    //TODO: via game state kan men zien of er een move/remove/removeorpass gebeurt ; dit moet er nog ingestoken worden
     private int minMaxRecursie(PylosGameIF game, PylosBoard board, int depth,PylosPlayerColor color){
         PylosGameState prevState=simulator.getState();
         PylosPlayerColor nextColor;
@@ -115,30 +118,39 @@ public class StudentPlayerBestFit extends PylosPlayer {
             }
         }
 
-        int tempDeltaScoreAllSpheres = Integer.MIN_VALUE;
-        for(PylosSphere sphere : usableSpheres){
-            for(PylosLocation location : usableLocations){
-                if (sphere.canMoveTo(location)) {
-                    simulator.moveSphere(sphereToMove, location);
-                    calculateAllScores(board);
-                    if(depth+1 < recursionDepth ) {
-                        int tempDeltaScore = minMaxRecursie(game, board, depth++,nextColor);
-                        if(tempDeltaScoreAllSpheres < tempDeltaScore){
-                            tempDeltaScoreAllSpheres = tempDeltaScore;
+        if(prevState == PylosGameState.MOVE) {
+            int tempDeltaScoreAllSpheres = Integer.MIN_VALUE;
+            for (PylosSphere sphere : usableSpheres) {
+                for (PylosLocation location : usableLocations) {
+                    if (sphere.canMoveTo(location)) {
+                        simulator.moveSphere(sphereToMove, location);
+                        calculateAllScores(board);
+                        if (depth + 1 < recursionDepth) {
+                            int tempDeltaScore = minMaxRecursie(game, board, depth++, nextColor);
+                            if (tempDeltaScoreAllSpheres < tempDeltaScore) {
+                                tempDeltaScoreAllSpheres = tempDeltaScore;
+                                sphereToMove = sphere;
+                                locationToMove = location;
+                            }
+                        } else if (tempDeltaScoreAllSpheres < totalOwnScore - totalEnemyScore) {
+                            tempDeltaScoreAllSpheres = totalOwnScore - totalEnemyScore;
                             sphereToMove = sphere;
                             locationToMove = location;
                         }
-                    }else if (tempDeltaScoreAllSpheres < totalOwnScore-totalEnemyScore){
-                        tempDeltaScoreAllSpheres = totalOwnScore - totalEnemyScore;
-                        sphereToMove = sphere;
-                        locationToMove = location;
-                    }
-                    simulator.undoAddSphere(sphereToMove,prevState,color);
+                        simulator.undoAddSphere(sphereToMove, prevState, color);
 
+                    }
                 }
             }
-        }
-        return tempDeltaScoreAllSpheres;
+            return tempDeltaScoreAllSpheres;
+
+        }else if (prevState == PylosGameState.REMOVE_FIRST){
+
+        }else if(prevState == PylosGameState.REMOVE_SECOND){
+
+        }else if(prevState== PylosGameState.COMPLETED){
+
+        } else return Integer.MIN_VALUE;
 
     }
 
