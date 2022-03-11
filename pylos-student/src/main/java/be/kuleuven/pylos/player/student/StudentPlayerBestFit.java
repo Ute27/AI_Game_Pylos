@@ -158,7 +158,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
             }
         }else return Integer.MIN_VALUE;
 
-        return Integer.MIN_VALUE;
     }
 
     //TODO: da werkt hier maar heel soms
