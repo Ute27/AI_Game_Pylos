@@ -16,9 +16,9 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private PylosBoard previousBoard;
     private PylosPlayerColor enemyColor;
 
-    private final int tresholdToRemove = 100;
+    private final int tresholdToRemove = 600;
     private final int valueHeightInLocationScore = 20;
-    private final int reserveScore = 150;
+    private final int reserveScore = 1000;
 
     // check** globale map: key= sphere , value = score // optioneel: 2 scores, verliezend of winnend
     // check** (ben niet zeker of dit nodig is)+(java gebruikt pass by copy bij argumenten) globale Board opslaan, en iedere locatie vergelijkt met de vorige -> nieuwe scores
@@ -30,7 +30,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
     //TODO: de vierkanten in de hoeken pikt hij niet op
     @Override
     public void doMove(PylosGameIF game, PylosBoard board) {
-
         //Initialize method will have saved the previous board and checked which color this player is + added spheres to map
         if (!initialized) {
             initializeScore( board);
@@ -91,35 +90,37 @@ public class StudentPlayerBestFit extends PylosPlayer {
     @Override
     public void doRemove(PylosGameIF game, PylosBoard board) {
         calculateAllScores(board);
-        updateAllScores(board);
-        int minimalScore = reserveScore;
+        //updateAllScores(board);
+        int minimalScore = Integer.MAX_VALUE;
         PylosSphere sphereToMove = null;
         for(PylosSphere sphere: board.getSpheres(this)) {
-            if(scoreMapSpheres.get(sphere)<=minimalScore) {
+            if(scoreMapSpheres.get(sphere)<=minimalScore && !sphere.isReserve() && sphere.canRemove()) {
                 minimalScore = scoreMapSpheres.get(sphere);
                 sphereToMove = sphere;
             }
         }
-        //TODO: tijdelijke oplossing, wou gewoon de game verder kunnen spelen
-        if(sphereToMove == null)game.pass();
 
         //Remove the sphere IF it is on the board
         if(sphereToMove.getLocation()!=null)game.removeSphere(sphereToMove);
         previousBoard = board;
 
+
     }
 
     @Override
     public void doRemoveOrPass(PylosGameIF game, PylosBoard board) {
+        //Gebruik OF calculateAllScores OF updateAllScores want anders ga je bij updaten alles een tweede keer aanpassen.
         calculateAllScores(board);
-        updateAllScores(board);
+        //updateAllScores(board);
         boolean remove = false;
+        boolean possible = false;
         for(PylosSphere sphere: board.getSpheres(this)) {
             if(scoreMapSpheres.get(sphere)<=tresholdToRemove) {
                 remove = true;
             }
+            if(sphere.canRemove()) possible = true;
         }
-        if(remove) {
+        if(remove && possible) {
             doRemove(game, board);
         }
         else game.pass();
@@ -172,8 +173,16 @@ public class StudentPlayerBestFit extends PylosPlayer {
             }
         }
 
+        //step 2 : if we can't make the square with a sphere from the board then we use the reserve (basic) but the location is not yet identified
+        if(movingLocation==null) {
+            //TODO: voorkeur geven aan welke square, afhankelijk van het niveau waarop, nu neem ik gwn de eerste uit de lijst
+            for(PylosLocation location: doableSquares.get(0).getLocations()) {
+                if(location.isUsable()) movingLocation = location;
+            }
+        }
 
-        //step 2 : we fill the square that we just chose
+
+        //step 3 : we fill the square that we just chose
         if (movingLocation != null && movingSphere.canMoveTo(movingLocation)) {
             game.moveSphere(movingSphere, movingLocation);
             return true;
@@ -205,7 +214,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         List<PylosSquare> squares = new ArrayList<>();
 
         for (PylosSquare square : board.getAllSquares()) {
-            if (square.getInSquare(this) == 3) {
+            if (square.getInSquare(this) == 3 && square.getInSquare(enemyColor) == 0) {
                 squares.add(square);
             }
         }
@@ -259,6 +268,9 @@ public class StudentPlayerBestFit extends PylosPlayer {
             if (!sphere.isReserve()) {
                 evaluationFunctionSphere(sphere, board);
 
+            }
+            else {
+                scoreMapSpheres.put(sphere, reserveScore);
             }
 
         }
@@ -349,7 +361,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
             score += (enemySpheres * enemySpheres * 15 + 20);
             score += (ownSpheres  * ownSpheres  * 15 + 30);
         }
-        score += height * 30;
+        score += height * 50;
 
         scoreMapLocations.replace(givenLocation, score);
 
@@ -370,8 +382,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
             if(enemySpheresInSquare==2 && ourSpheresInSquare==0) enemyAlmostSquares++;
         }
         //bonus points: als we met één zet ervoor kunnen zorgen dat je op 2 plekken een vierkant gaat kunnen leggen
-        score+=ourAlmostSquares*3;
-        score+=enemyAlmostSquares*2;
+        score+=ourAlmostSquares*6;
+        score+=enemyAlmostSquares*4;
 
         //Om ervoor te zorgen dat je in het begin start in het midden, hoe meer squares hoe beter
         score+=givenLocation.getSquares().size();
