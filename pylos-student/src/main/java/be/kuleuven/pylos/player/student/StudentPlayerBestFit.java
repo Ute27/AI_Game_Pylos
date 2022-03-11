@@ -144,13 +144,21 @@ public class StudentPlayerBestFit extends PylosPlayer {
             }
             return tempDeltaScoreAllSpheres;
 
+            //TODO: sphere grootst verschil met reserve is het best
         }else if (prevState == PylosGameState.REMOVE_FIRST){
+            return Integer.MIN_VALUE;
 
+            //TODO: verschile met reserve score
         }else if(prevState == PylosGameState.REMOVE_SECOND){
+            return Integer.MIN_VALUE;
 
         }else if(prevState== PylosGameState.COMPLETED){
-
-        } else return Integer.MIN_VALUE;
+            if(simulator.getWinner() == this.PLAYER_COLOR){
+                return Integer.MAX_VALUE;
+            }else {
+                return totalOwnScore - totalEnemyScore;
+            }
+        }else return Integer.MIN_VALUE;
 
     }
 
