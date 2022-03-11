@@ -17,6 +17,7 @@ import java.util.Random;
 public class PylosMain {
 
 	public PylosMain() {
+		startBattle();
 	}
 
 	public void startPerformanceBattles() {

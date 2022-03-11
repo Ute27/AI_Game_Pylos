@@ -71,7 +71,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
         // sam: hier houdt de score al rekening mee, in het geval er 2 squares zouden gevuld worden zou de score extreem groot zijn
 
         if(!moved) {
-            //Update het placingscoresysteem dat scores geeft aan locaties ipv spheres
             PylosLocation locationToMoveTo = null;
             int maxScore = 0;
             for(PylosLocation location: board.getLocations()) {
@@ -109,7 +108,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
         for(PylosLocation location: board.getLocations()){
             if(location.isUsable()){
                 usableLocations.add(location);
-
                 for(PylosSphere sphere: board.getSpheres(color)) {
                     if(!usableSpheres.contains(sphere) && sphere.canMoveTo(location)) {
                        usableSpheres.add(sphere);
@@ -152,6 +150,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         } else return Integer.MIN_VALUE;
 
+        return Integer.MIN_VALUE;
     }
 
     //TODO: da werkt hier maar heel soms
@@ -314,6 +313,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
 
         scoreMapSpheresOwn = new HashMap<>();
+        scoreMapSpheresEnemy = new HashMap<>();
         scoreMapLocations = new HashMap<>();
         simulator = new PylosGameSimulator(game.getState(), this.PLAYER_COLOR,board);
 
@@ -372,9 +372,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         totalEnemyScore=tempvalue;
 
         for(PylosLocation location : board.getLocations()){
-            if(location.isUsable()){
-                evaluationFunctionLocationTest(location,board);
-            }
+            evaluationFunctionLocationTest(location,board);
         }
     }
 
