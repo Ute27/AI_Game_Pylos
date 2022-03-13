@@ -27,7 +27,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private int totalOwnScore = 0;
     private int totalEnemyScore = 0;
 
-    private final int recursionDepth = 2;
+    private final int recursionDepth = 1;
+
     private PylosSphere sphereToMove=null;
     private PylosLocation locationToMove=null;
     private boolean toRemoveFirst = false;
@@ -106,6 +107,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private int minMaxRecursie(PylosBoard board, int depth,PylosPlayerColor color){
         PylosGameState prevState=simulator.getState();
         PylosPlayerColor nextColor;
+
         int tempDeltaScoreAllSpheres;
         if(color==this.PLAYER_COLOR){
             nextColor=enemyColor;
@@ -127,9 +129,9 @@ public class StudentPlayerBestFit extends PylosPlayer {
             for(PylosLocation location: board.getLocations()){
                 if(location.isUsable()){
                     for(PylosSphere sphere: board.getSpheres(color)) {
-                        if(!usableSpheres.contains(sphere) && sphere.canMoveTo(location)) {
-                            usableSpheres.add(sphere);
-                            if(!usableLocations.contains(location)) usableLocations.add(location);
+                        if(sphere.canMoveTo(location)) {
+                            if (!usableSpheres.contains(sphere)) usableSpheres.add(sphere);
+                            if (!usableLocations.contains(location)) usableLocations.add(location);
                         }
                     }
                 }
@@ -142,14 +144,13 @@ public class StudentPlayerBestFit extends PylosPlayer {
                             simulator.moveSphere(sphere, location);
 
                             calculateAllScores(board);
-
+                            int tempDepth = depth;
                             //at the end of the recursion or not? not: keep going
                             int tempDeltaScore;
-                            if (depth < recursionDepth) {
+                            if (tempDepth < recursionDepth) {
                                 //TODO: verandert sphere.locatie naar null; ergens een removeSphere te veel?
-                                depth++;
-                                tempDeltaScore = minMaxRecursie(board,depth , nextColor);
-                                System.out.println("depth:" + depth);
+                                tempDepth++;
+                                tempDeltaScore = minMaxRecursie(board,tempDepth , nextColor);
                                 if(sphere.getLocation() == null){
                                     System.out.println("sefds");
                                 }
@@ -176,9 +177,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
                                     tempLocation = location;
                                 }
                             }
-                            if(sphere.getLocation() == null){
-                                System.out.println("sefds");
-                            }
 
                             simulator.undoAddSphere(sphere, prevState, color);
                         }
@@ -190,11 +188,13 @@ public class StudentPlayerBestFit extends PylosPlayer {
         }else if (prevState == PylosGameState.REMOVE_FIRST){
 
             for (PylosSphere sphere : board.getSpheres(nextColor)) {
+
                 if (sphere.canRemove()) {
                     PylosLocation prevLoc = sphere.getLocation();
                     simulator.removeSphere(sphere);
                     calculateAllScores(board);
                     int tempDeltaScore = minMaxRecursie(board, depth, nextColor);
+
                     //if new delta is bigger then use that one (own turn)
                     if (color == this.PLAYER_COLOR && tempDeltaScoreAllSpheres <= tempDeltaScore) {
                         double rand = Math.random();
@@ -215,10 +215,12 @@ public class StudentPlayerBestFit extends PylosPlayer {
                     simulator.undoRemoveFirstSphere(sphere,prevLoc,prevState,color);
                 }
             }
+
             if(depth==0){
                 toRemoveFirst = true;
                 sphereToMove=tempSphere;
             }
+
             return tempDeltaScoreAllSpheres;
 
         }else if(prevState == PylosGameState.REMOVE_SECOND){
