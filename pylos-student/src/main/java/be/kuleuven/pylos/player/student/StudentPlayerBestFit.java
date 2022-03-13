@@ -31,10 +31,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
     private PylosSphere sphereToMove=null;
     private PylosLocation locationToMove=null;
-    private boolean toRemoveFirst = false;
     private boolean toRemoveSec = false;
-    private boolean toPass = false;
-    private int deltaScore = Integer.MIN_VALUE;
+
 
     // check** globale map: key= sphere , value = score // optioneel: 2 scores, verliezend of winnend
     // check** (ben niet zeker of dit nodig is)+(java gebruikt pass by copy bij argumenten) globale Board opslaan, en iedere locatie vergelijkt met de vorige -> nieuwe scores
@@ -54,9 +52,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         //updateAllScores(board);
         calculateAllScores(board);
 
-        int delta = minMaxRecursie(board,0,this.PLAYER_COLOR);
-        System.out.println("Move");
-        System.out.println("delta: "+delta);
+        minMaxRecursie(board,0,this.PLAYER_COLOR);
         game.moveSphere(sphereToMove,locationToMove);
 /*
         //step 1
@@ -195,20 +191,24 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
             for (PylosSphere sphere : board.getSpheres(nextColor)) {
 
-                if (sphere.canRemove()) {
+                if (!sphere.isReserve() && sphere.canRemove()) {
                     PylosLocation prevLoc = sphere.getLocation();
                     prevState=simulator.getState();
                     simulator.removeSphere(sphere);
+
                     calculateAllScores(board);
+
                     int tempDeltaScore = minMaxRecursie(board, depth, nextColor);
 
                     //if new delta is bigger then use that one (own turn)
-                    if (color == this.PLAYER_COLOR && tempDeltaScoreAllSpheres <= tempDeltaScore) {
-                        double rand = Math.random();
-                        if (tempDeltaScoreAllSpheres == tempDeltaScore && rand < 0.5) {
-                        } else {
-                            tempDeltaScoreAllSpheres = tempDeltaScore;
-                            tempSphere = sphere;
+                    if (color == this.PLAYER_COLOR) {
+                        if (tempDeltaScoreAllSpheres <= tempDeltaScore) {
+                            double rand = Math.random();
+                            if (tempDeltaScoreAllSpheres == tempDeltaScore && rand < 0.5) {
+                            } else {
+                                tempDeltaScoreAllSpheres = tempDeltaScore;
+                                tempSphere = sphere;
+                            }
                         }
                         //if new delta is smaller then use that one (enemy turn)
                     } else if (color == enemyColor && tempDeltaScoreAllSpheres >= tempDeltaScore) {
@@ -223,19 +223,25 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 }
             }
 
-            if(depth==0){
-                toRemoveFirst = true;
-                sphereToMove=tempSphere;
+            if(depth == 0){
+                System.out.print("s");
             }
+
+            sphereToMove=tempSphere;
+
 
             return tempDeltaScoreAllSpheres;
 
         }else if(prevState == PylosGameState.REMOVE_SECOND){
-            calculateAllScores(board);
+
+
             for (PylosSphere sphere : board.getSpheres(color)) {
-                if (sphere.canRemove()) {
+
+                if (!sphere.isReserve() && sphere.canRemove()) {
+
                     PylosLocation prevLoc = sphere.getLocation();
                     prevState=simulator.getState();
+
                     simulator.removeSphere(sphere);
                     calculateAllScores(board);
 
@@ -282,7 +288,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
                     tempDeltaScoreAllSpheres = tempDeltaScore;
                 }
             }
-            else {
+            else if(depth==0){
                 toRemoveSec=true;
                 sphereToMove=tempSphere;
             }
@@ -292,6 +298,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
             return tempDeltaScoreAllSpheres;
 
         }else if(prevState== PylosGameState.COMPLETED){
+
             if(simulator.getWinner() == this.PLAYER_COLOR){
                 return Integer.MAX_VALUE;
             }else {
@@ -307,13 +314,9 @@ public class StudentPlayerBestFit extends PylosPlayer {
     @Override
     public void doRemove(PylosGameIF game, PylosBoard board) {
 
-        int delta = minMaxRecursie(board,0,this.PLAYER_COLOR);
-        if(toRemoveFirst) {
-            System.out.println("remove");
-            System.out.println("delta: "+delta);
-            toRemoveFirst = false;
-            game.removeSphere(sphereToMove);
-        }
+        minMaxRecursie(board,0,this.PLAYER_COLOR);
+        game.removeSphere(sphereToMove);
+
 
         /*
         calculateAllScores(board);
@@ -337,14 +340,11 @@ public class StudentPlayerBestFit extends PylosPlayer {
     @Override
     public void doRemoveOrPass(PylosGameIF game, PylosBoard board) {
 
-        int delta = minMaxRecursie(board,0,this.PLAYER_COLOR);
+        minMaxRecursie(board,0,this.PLAYER_COLOR);
         if(toRemoveSec) {
-            System.out.println("removeOrPass");
-            System.out.println("delta: "+delta);
             toRemoveSec = false;
             game.removeSphere(sphereToMove);
-        }else if(toPass){
-            toPass = false;
+        }else {
             game.pass();
         }
 
