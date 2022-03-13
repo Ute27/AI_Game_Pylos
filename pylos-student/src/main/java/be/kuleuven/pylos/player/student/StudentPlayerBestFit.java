@@ -141,6 +141,12 @@ public class StudentPlayerBestFit extends PylosPlayer {
             for (PylosSphere sphere : usableSpheres) {
                 for (PylosLocation location : usableLocations) {
                         if (sphere.canMoveTo(location)) {
+                            boolean isReserve =false;
+                            if(sphere.isReserve())isReserve=true;
+
+                            PylosLocation prevLoc = sphere.getLocation();
+                            prevState=simulator.getState();
+
                             simulator.moveSphere(sphere, location);
 
                             calculateAllScores(board);
@@ -151,9 +157,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
                                 //TODO: verandert sphere.locatie naar null; ergens een removeSphere te veel?
                                 tempDepth++;
                                 tempDeltaScore = minMaxRecursie(board,tempDepth , nextColor);
-                                if(sphere.getLocation() == null){
-                                    System.out.println("sefds");
-                                }
                             } else {
                                 tempDeltaScore = totalOwnScore - totalEnemyScore;
                             }
@@ -178,10 +181,13 @@ public class StudentPlayerBestFit extends PylosPlayer {
                                 }
                             }
 
-                            simulator.undoAddSphere(sphere, prevState, color);
+                            if(isReserve)simulator.undoAddSphere(sphere, prevState, color);
+                            else simulator.undoMoveSphere(sphere,prevLoc, prevState, color);
                         }
                     }
                 }
+
+
             sphereToMove = tempSphere;
             locationToMove = tempLocation;
             return tempDeltaScoreAllSpheres;
@@ -191,6 +197,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
                 if (sphere.canRemove()) {
                     PylosLocation prevLoc = sphere.getLocation();
+                    prevState=simulator.getState();
                     simulator.removeSphere(sphere);
                     calculateAllScores(board);
                     int tempDeltaScore = minMaxRecursie(board, depth, nextColor);
@@ -212,7 +219,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
                             tempSphere = sphere;
                         }
                     }
-                    simulator.undoRemoveFirstSphere(sphere,prevLoc,prevState,color);
+                    simulator.undoRemoveFirstSphere(sphere,prevLoc,prevState,nextColor);
                 }
             }
 
@@ -228,6 +235,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
             for (PylosSphere sphere : board.getSpheres(color)) {
                 if (sphere.canRemove()) {
                     PylosLocation prevLoc = sphere.getLocation();
+                    prevState=simulator.getState();
                     simulator.removeSphere(sphere);
                     calculateAllScores(board);
 
