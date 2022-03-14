@@ -601,6 +601,57 @@ public class StudentPlayerBestFit extends PylosPlayer {
         scoreMapSpheresOwn.replace(sphere, score);
     }
 
+    private void newEvaluationFunction(PylosSphere sphere, PylosBoard board) {
+
+        int scoreForSquare = 100; //x4 moet nog steeds wel kleiner zijn dan reservescore plus wordt 4 keer meegerekend
+        //TODO: bij een square krijg je altijd een super goeie score, maar als je die wil weghalen, mag je daar geen rekening mee houden dus fix gwn dat je eerste remove altijd eentje is uit het gemaakte vierkant!
+        int scoreForAlmostSquare = 50; //x3
+        int scoreForSabotage = 250; //x1
+
+         /*
+                STEP 2: Looking for squares in which the sphere is located
+         */
+        List<PylosSquare> goodSquares = sphere.getLocation().getSquares();
+
+        // after the squares are found calculate the new score
+        int score = 0;
+
+        int enemySpheres;
+        int ownSpheres;
+        int height = sphere.getLocation().Z;
+
+
+        //Add the score for each square
+        for (PylosSquare square : goodSquares) {
+            enemySpheres = square.getInSquare(enemyColor);
+            ownSpheres = square.getInSquare(this.PLAYER_COLOR);
+            score+=enemySpheres+ownSpheres;
+
+            //Bonus wanneer je bijna een vierkant maakt of effectief een vierkant hebt gemaakt
+            if(ownSpheres==4) {
+                //Zal vier keer meegeteld worden als bonus
+                score+=scoreForSquare;
+            }
+            else if (ownSpheres==3 && enemySpheres==0) {
+                //Zal drie keer meegeteld worden als bonus
+                score+=scoreForAlmostSquare;
+            }
+            else if(ownSpheres==1 && enemySpheres==3) {
+                //Zal maar één keer meegeteld worden als bonus
+                score+=scoreForSabotage;
+            }
+//TODO: mis zelfs score verminderen als vierkant vol zit --> of sphere met de minste score in het vierkant score 0 geven
+//Probleem = we willen de situatie waarbij vier van eigen kleur naast elkaar liggen veel punten geven zodat deze wordt gekozen, maar bij het verwijderen van bollen, willen we ook dat deze worden weggenomen. Dit kan gewoon niet in één systeem gestoken worden.
+
+        }
+        score += height * 20;
+
+        //Midden geven we een beetje bonuspunten want daar lig je meestal beter dus midden midden krijgt 2 puntjes en midden rand krijgt er 1, rand rand krijgt niks
+        if(goodSquares.size()!=1) score+=goodSquares.size()/2;
+
+        scoreMapSpheresOwn.replace(sphere, score);
+    }
+
 
     private void evaluationFunctionSphereEnemy(PylosSphere sphere, PylosBoard board) {
 
