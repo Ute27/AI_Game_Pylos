@@ -26,7 +26,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private int totalOwnScore = 0;
     private int totalEnemyScore = 0;
 
-    private final int recursionDepth = 3;
+    private final int recursionDepth = 2;
     private final int MaxNumberOfProbableMoves = 15;
 
     private PylosSphere sphereToMove=null;
@@ -54,49 +54,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         minMaxRecursie(board,0,this.PLAYER_COLOR);
         game.moveSphere(sphereToMove,locationToMove);
-/*
-        //step 1
-        //Check if we are losing or winning and depending on this info, check for own square first or enemy square first
-        boolean winning = false;
-        if (board.getReservesSize(this) >= board.getReservesSize(enemyColor)) winning = true;
-        boolean moved = false;
 
-        //STEP 1: check for squares (yours or your enemies first depending on winning)
-        if (winning) {
-            moved = tryToMakeOwnSquare(game, board);
-            if (!moved) moved = tryToSabotageEnemySquare(game, board);
-        } else {
-            moved = tryToSabotageEnemySquare(game, board);
-            if (!moved) moved = tryToMakeOwnSquare(game, board);
-        }
-
-        //STEP 2: put the sphere somewhere near most other spheres
-        //Mogelijke verbeteringen hier: kijken als je bvb drie bollen dicht bij elkaar hebt en met 1 te zetten, 2 mogelijke square makings creeert
-        //Idem bij enemy en zo een plek proberen saboteren
-        // sam: hier houdt de score al rekening mee, in het geval er 2 squares zouden gevuld worden zou de score extreem groot zijn
-
-        if(!moved) {
-            PylosLocation locationToMoveTo = null;
-            int maxScore = 0;
-            for(PylosLocation location: board.getLocations()) {
-                if(location.isUsable() && scoreMapLocations.get(location)>maxScore) {
-                    //System.out.println("changed: " + scoreMapLocations.get(location) +" "+ scoreMapLocations.get(locationToMoveTo));
-                    maxScore = scoreMapLocations.get(location);
-                    locationToMoveTo = location;
-                }
-            }
-            PylosSphere sphereToMove = board.getReserve(this);
-            int minScore = reserveScore;
-            for(PylosSphere sphere: board.getSpheres(this)) {
-                if(sphere.canMoveTo(locationToMoveTo) && scoreMapSpheresOwn.get(sphere)<=minScore) {
-                    sphereToMove = sphere;
-                    minScore = scoreMapSpheresOwn.get(sphereToMove);
-                }
-            }
-            game.moveSphere(sphereToMove, locationToMoveTo);
-        }
-
-        previousBoard = board;*/
     }
 
     //TODO:remove werkt nog niet
@@ -150,10 +108,11 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 for (PylosLocation location : usableLocations) {
                     if(sphere.canMoveTo(location)) {
 
-                        boolean isReserve = false;
-                        if (sphere.isReserve()) isReserve = true;
+                        boolean isReserve = sphere.isReserve();
+
                         PylosLocation prevLoc = sphere.getLocation();
                         prevState = simulator.getState();
+
                         simulator.moveSphere(sphere, location);
                         calculateAllScores(board);
 
@@ -248,10 +207,12 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 }
             }
 
-
-            sphereToMove = tempSphere;
-            locationToMove = tempLocation;
+            if(depth==0){
+                sphereToMove = tempSphere;
+                locationToMove = tempLocation;
+            }
             return tempDeltaScoreAllSpheres;
+
         }else if (prevState == PylosGameState.REMOVE_FIRST){
 
             if(nextColor==this.PLAYER_COLOR){
@@ -299,6 +260,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
 
             return tempDeltaScoreAllSpheres;
+
         //TODO: AssertionError: Light can't remove a sphere of Dark + er is iets grondig mis mee wss bij de pas!
             // TODO: StackOverflowError
         }else if(prevState == PylosGameState.REMOVE_SECOND){
@@ -379,24 +341,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
         minMaxRecursie(board,0,enemyColor);
         game.removeSphere(sphereToMove);
 
-
-        /*
-        calculateAllScores(board);
-        //updateAllScores(board);
-        int minimalScore = Integer.MAX_VALUE;
-        PylosSphere sphereToMove = null;
-
-        for(PylosSphere sphere: board.getSpheres(this)) {
-            if(scoreMapSpheresOwn.get(sphere)<=minimalScore && !sphere.isReserve() && sphere.canRemove()) {
-                minimalScore = scoreMapSpheresOwn.get(sphere);
-                sphereToMove = sphere;
-            }
-        }
-
-        //Remove the sphere IF it is on the board
-        if(sphereToMove.getLocation()!=null)game.removeSphere(sphereToMove);
-        previousBoard = board;
-*/
     }
 
     @Override
@@ -405,31 +349,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         simulator=new PylosGameSimulator(game.getState(),this.PLAYER_COLOR,board);
 
         minMaxRecursie(board,0,this.PLAYER_COLOR);
-        if(toRemoveSec) {
-            toRemoveSec = false;
-            game.removeSphere(sphereToMove);
-        }else {
-            game.pass();
-        }
-
-
-        /*
-        //Gebruik OF calculateAllScores OF updateAllScores want anders ga je bij updaten alles een tweede keer aanpassen.
-        calculateAllScores(board);
-        //updateAllScores(board);
-        boolean remove = false;
-        boolean possible = false;
-        for(PylosSphere sphere: board.getSpheres(this)) {
-            if(scoreMapSpheresOwn.get(sphere)<=tresholdToRemove) {
-                remove = true;
-            }
-            if(sphere.canRemove()) possible = true;
-        }
-        if(remove && possible) {
-            doRemove(game, board);
-        }
-        else game.pass();
-*/
+        game.removeSphere(sphereToMove);
     }
 /*
     private boolean tryToMakeOwnSquare(PylosGameIF game, PylosBoard board) {
