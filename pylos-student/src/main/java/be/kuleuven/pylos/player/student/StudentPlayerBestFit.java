@@ -153,13 +153,37 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 }
             }
 
+            if(usableSpheres.size() == 1 && usableLocations.size()==1){
+                PylosSphere sphere =usableSpheres.get(0);
+                PylosLocation location = usableLocations.get(0);
+
+                PylosLocation prevLoc = sphere.getLocation();
+                prevState = simulator.getState();
+
+                boolean isReserve = false;
+                if (sphere.isReserve()) isReserve = true;
+
+                simulator.moveSphere(sphere, location);
+
+                calculateAllScores(board);
+                int tempScore =  totalOwnScore - totalEnemyScore;
+
+                if (isReserve) simulator.undoAddSphere(sphere, prevState, color);
+                else simulator.undoMoveSphere(sphere, prevLoc, prevState, color);
+                if(depth==0){
+                    sphereToMove = sphere;
+                    locationToMove = location;
+                }
+                return tempScore;
+            }
+
             //go over each sphere to each possible location
             /*
             for (PylosSphere sphere : probableSpheres) {
                 for (PylosLocation location : probableLocations) {*/
             for(int i=0;i<MaxNumberOfProbableMoves;i++) {
-                PylosSphere sphere=probableSpheres[i];
-                PylosLocation location=probableLocations[i];
+                PylosSphere sphere = probableSpheres[i];
+                PylosLocation location = probableLocations[i];
                 if (sphere != null && location != null && sphere.canMoveTo(location)) {
                     boolean isReserve = false;
                     if (sphere.isReserve()) isReserve = true;
@@ -174,7 +198,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
                     int tempDepth = depth;
                     //at the end of the recursion or not? not: keep going
                     int tempDeltaScore;
-                    if (tempDepth < recursionDepth || simulator.getState() != MOVE) {
+                    if (tempDepth < recursionDepth) {
 
                         tempDepth++;
                         tempDeltaScore = minMaxRecursie(board, tempDepth, nextColor);
@@ -207,10 +231,19 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 }
             }
 
-            if(depth==0){
-                sphereToMove = tempSphere;
-                locationToMove = tempLocation;
+
+            sphereToMove = tempSphere;
+            locationToMove = tempLocation;
+            if(depth == 0 && sphereToMove == null){
+                System.out.print("sdf");
             }
+            if(depth == 0 && locationToMove == null){
+                System.out.print("sdf");
+            }
+            if(depth == 0 && !sphereToMove.canMoveTo(locationToMove)){
+                System.out.print("sdf");
+            }
+
             return tempDeltaScoreAllSpheres;
 
         }else if (prevState == PylosGameState.REMOVE_FIRST){
@@ -331,7 +364,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
         }else return totalOwnScore - totalEnemyScore;
     }
 
-    //TODO: da werkt hier maar heel soms
     //Sam: in de huidige implementatie is er geen zekerheid dat er een bal uit het vierkant genomen wordt
     @Override
     public void doRemove(PylosGameIF game, PylosBoard board) {
