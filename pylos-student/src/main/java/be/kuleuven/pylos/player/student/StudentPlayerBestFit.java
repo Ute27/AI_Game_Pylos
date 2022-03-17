@@ -27,7 +27,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private int totalEnemyScore = 0;
 
     private final int recursionDepth = 2;
-    private final int MaxNumberOfProbableMoves = 15;
+    private final int MaxNumberOfProbableMoves = 10;
 
     private PylosSphere sphereToMove=null;
     private PylosLocation locationToMove=null;
@@ -39,11 +39,11 @@ public class StudentPlayerBestFit extends PylosPlayer {
     // evaluatie fctie: vierkant, eigen ballen in square viscinity, enemy ballen in square viscinity, hoe lager de bal; hoe lager de score
     // eigen vierkant of enemy vierkant? -> hangt ervan af hoeveel ballen in reserve zijn bij ons en de enemy
 
-    //TODO: mischien conditie van winnen veranderen naar welke speler de hoogste totale score heeft?
-    //Antwoord Ute: Nee want als al uw bollen op goeie plekken vastliggen, maar ze liggen daar allemaal (je hebt geen reserve meer), ga je en hogere totale score hebben dus dat geeft een vertekend beeld
-    //TODO: de vierkanten in de hoeken pikt hij niet op
+
     @Override
     public void doMove(PylosGameIF game, PylosBoard board) {
+        sphereToMove=null;
+        locationToMove=null;
 
         //Initialize method will have saved the previous board and checked which color this player is + added spheres to map
         if (!initialized) {
@@ -51,13 +51,13 @@ public class StudentPlayerBestFit extends PylosPlayer {
         }
         //updateAllScores(board);
         calculateAllScores(board);
-
+        //TODO: Can't move PylosSphere[player=Light, id=13], at BoardLocation[x=2, y=2, z=1], to BoardLocation[x=1, y=2, z=1], should be moved to higher z-level
         minMaxRecursie(board,0,this.PLAYER_COLOR);
         game.moveSphere(sphereToMove,locationToMove);
 
     }
 
-    //TODO:remove werkt nog niet
+
     private int minMaxRecursie(PylosBoard board, int depth,PylosPlayerColor color){
         PylosGameState prevState=simulator.getState();
         PylosPlayerColor nextColor;
@@ -221,8 +221,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
                         if (tempDeltaScoreAllSpheres == tempDeltaScore && rand < 0.5) {
                         } else {
                             tempDeltaScoreAllSpheres = tempDeltaScore;
-                            tempSphere = sphere;
-                            tempLocation = location;
                         }
                     }
 
@@ -230,20 +228,23 @@ public class StudentPlayerBestFit extends PylosPlayer {
                     else simulator.undoMoveSphere(sphere, prevLoc, prevState, color);
                 }
             }
+            if(depth == 0 && tempSphere == null){
+                System.out.print("sdf");
+            }
+            if(depth == 0 && tempLocation == null){
+                System.out.print("sdf");
+            }
 
 
             sphereToMove = tempSphere;
             locationToMove = tempLocation;
-            if(depth == 0 && sphereToMove == null){
-                System.out.print("sdf");
-            }
             if(depth == 0 && locationToMove == null){
                 System.out.print("sdf");
             }
+
             if(depth == 0 && !sphereToMove.canMoveTo(locationToMove)){
                 System.out.print("sdf");
             }
-
             return tempDeltaScoreAllSpheres;
 
         }else if (prevState == PylosGameState.REMOVE_FIRST){
@@ -294,8 +295,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
             return tempDeltaScoreAllSpheres;
 
-        //TODO: AssertionError: Light can't remove a sphere of Dark + er is iets grondig mis mee wss bij de pas!
-            // TODO: StackOverflowError
+
         }else if(prevState == PylosGameState.REMOVE_SECOND){
 
             for (PylosSphere sphere : board.getSpheres(color)) {
@@ -303,11 +303,13 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 if (!sphere.isReserve() && sphere.canRemove()) {
                     PylosLocation prevLoc = sphere.getLocation();
                     prevState=simulator.getState();
+                    int tempDepth = depth;
                     simulator.removeSphere(sphere);
+                    tempDepth++;
 
                     calculateAllScores(board);
 
-                    int tempDeltaScore = minMaxRecursie(board, depth, nextColor);
+                    int tempDeltaScore = minMaxRecursie(board, tempDepth, nextColor);
 
                     //if new delta is bigger then use that one (own turn)
                     if (color == this.PLAYER_COLOR) {
@@ -315,8 +317,10 @@ public class StudentPlayerBestFit extends PylosPlayer {
                             double rand = Math.random();
                             if (tempDeltaScoreAllSpheres == tempDeltaScore && rand < 0.5) {}
                             else {
+                                if(depth==0){
+                                    tempSphere = sphere;
+                                }
                                 tempDeltaScoreAllSpheres = tempDeltaScore;
-                                tempSphere = sphere;
                             }
                         }
                         //if new delta is smaller then use that one (enemy turn)
@@ -325,7 +329,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
                         if (tempDeltaScoreAllSpheres == tempDeltaScore && rand < 0.5) {}
                         else {
                             tempDeltaScoreAllSpheres = tempDeltaScore;
-                            tempSphere = sphere;
                         }
                     }
                     simulator.undoRemoveSecondSphere(sphere,prevLoc,prevState,color);
@@ -335,7 +338,9 @@ public class StudentPlayerBestFit extends PylosPlayer {
             //houdt rekening mee dat de pass als eerste zet kan gebeuren
             simulator.pass();
             calculateAllScores(board);
-            int tempDeltaScore = minMaxRecursie( board, depth, nextColor);
+            int tempDepth = depth;
+            tempDepth++;
+            int tempDeltaScore = minMaxRecursie( board, tempDepth, nextColor);
 
             //if new delta is bigger then use that one (own turn)
             if (color == this.PLAYER_COLOR && tempDeltaScoreAllSpheres <= tempDeltaScore) {
@@ -354,8 +359,9 @@ public class StudentPlayerBestFit extends PylosPlayer {
             }
             else if(depth==0){
                 toRemoveSec=true;
-                sphereToMove=tempSphere;
             }
+            sphereToMove=tempSphere;
+
 
             simulator.undoPass(prevState,color);
 
@@ -367,7 +373,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
     //Sam: in de huidige implementatie is er geen zekerheid dat er een bal uit het vierkant genomen wordt
     @Override
     public void doRemove(PylosGameIF game, PylosBoard board) {
-
+        sphereToMove=null;
+        locationToMove=null;
         simulator=new PylosGameSimulator(game.getState(),this.PLAYER_COLOR,board);
 
         minMaxRecursie(board,0,enemyColor);
@@ -377,7 +384,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
     @Override
     public void doRemoveOrPass(PylosGameIF game, PylosBoard board) {
-
+        sphereToMove=null;
+        locationToMove=null;
         simulator=new PylosGameSimulator(game.getState(),this.PLAYER_COLOR,board);
 
         minMaxRecursie(board,0,this.PLAYER_COLOR);
@@ -432,7 +440,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         //step 2 : if we can't make the square with a sphere from the board then we use the reserve (basic) but the location is not yet identified
         if(movingLocation==null) {
-            //TODO: voorkeur geven aan welke square, afhankelijk van het niveau waarop, nu neem ik gwn de eerste uit de lijst
+
             for(PylosLocation location: doableSquares.get(0).getLocations()) {
                 if(location.isUsable()) movingLocation = location;
             }
@@ -638,7 +646,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private void newEvaluationFunction(PylosSphere sphere, PylosBoard board) {
 
         int scoreForSquare = 100; //x4 moet nog steeds wel kleiner zijn dan reservescore plus wordt 4 keer meegerekend
-        //TODO: bij een square krijg je altijd een super goeie score, maar als je die wil weghalen, mag je daar geen rekening mee houden dus fix gwn dat je eerste remove altijd eentje is uit het gemaakte vierkant!
         int scoreForAlmostSquare = 50; //x3
         int scoreForSabotage = 250; //x1
 
@@ -674,8 +681,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 //Zal maar één keer meegeteld worden als bonus
                 score+=scoreForSabotage;
             }
-//TODO: mis zelfs score verminderen als vierkant vol zit --> of sphere met de minste score in het vierkant score 0 geven
-//Probleem = we willen de situatie waarbij vier van eigen kleur naast elkaar liggen veel punten geven zodat deze wordt gekozen, maar bij het verwijderen van bollen, willen we ook dat deze worden weggenomen. Dit kan gewoon niet in één systeem gestoken worden.
 
         }
         score += height * 20;
