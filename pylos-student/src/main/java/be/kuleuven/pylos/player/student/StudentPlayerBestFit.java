@@ -57,7 +57,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
         simulator=new PylosGameSimulator(game.getState(),this.PLAYER_COLOR,board);
         calculateAllScores(board);
 
-        //TODO: doMove recursie zit opeens in het removesecond geddeelte?
         minMaxRecursie(board,0,this.PLAYER_COLOR);
         if(locationToMove!=null && !sphereToMove.canMoveTo(locationToMove)){
             System.out.print("sdf");
