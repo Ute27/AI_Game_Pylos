@@ -260,9 +260,23 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 tempDeltaScoreAllSpheres = Integer.MAX_VALUE;
             }
 
-            for (PylosSphere sphere : board.getSpheres(nextColor)) {
+            /**
+             * Ik heb dit aangepast zodat de eerste remove ALTIJD eentje is uit het net gemaakte vierkant
 
-                if (!sphere.isReserve() && sphere.canRemove()) {
+             Eerste twee lijnen van de forlus waren zo:
+
+             for (PylosSphere sphere : board.getSpheres(nextColor)) {
+
+             if (!sphere.isReserve() && sphere.canRemove()) {
+
+
+             */
+
+            PylosSphere[] spheresFromSquares = getSpheresInSquare(board, nextColor);
+
+            for(PylosSphere sphere: spheresFromSquares) {
+
+                if(sphere.canRemove()) {
                     PylosLocation prevLoc = sphere.getLocation();
                     prevState=simulator.getState();
                     simulator.removeSphere(sphere);
@@ -292,13 +306,16 @@ public class StudentPlayerBestFit extends PylosPlayer {
                         }
                     }
                     simulator.undoRemoveFirstSphere(sphere,prevLoc,prevState,nextColor);
+
                 }
+
             }
 
             sphereToMove=tempSphere;
 
 
             return tempDeltaScoreAllSpheres;
+
 
 
         }else if(currentState == PylosGameState.REMOVE_SECOND){
@@ -383,6 +400,26 @@ public class StudentPlayerBestFit extends PylosPlayer {
             return tempDeltaScoreAllSpheres;
 
         }else return totalOwnScore - totalEnemyScore;
+    }
+
+    private PylosSphere[] getSpheresInSquare(PylosBoard board, PylosPlayerColor color) {
+        PylosLocation[] locations = new PylosLocation[4];
+        PylosSphere[] spheres = new PylosSphere[4];
+
+        for(PylosSquare square: board.getAllSquares()) {
+            if(square.getInSquare(color)==4) {
+                locations = square.getLocations();
+            }
+        }
+
+        int i=0;
+        for(PylosLocation location: locations) {
+            spheres[i] = location.getSphere();
+            i++;
+        }
+
+        return spheres;
+
     }
 
     //Sam: in de huidige implementatie is er geen zekerheid dat er een bal uit het vierkant genomen wordt
