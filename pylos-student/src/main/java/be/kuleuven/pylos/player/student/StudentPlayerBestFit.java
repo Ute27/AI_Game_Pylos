@@ -20,8 +20,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private PylosPlayerColor enemyColor;
     private PylosGameSimulator simulator;
 
-    private final int valueHeightInLocationScore = 25;
-    private final int reserveScore = 25;
+    private final int valueHeightInLocationScore = 20;
+    private final int reserveScore = 750;
 
     private int totalOwnScore = 0;
     private int totalEnemyScore = 0;
@@ -114,8 +114,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 }else probableScores[i] = Integer.MAX_VALUE;
             }
 
-            int smallestScore = probableScores[0];
-            int smallestScoreIndex = 0;
+            int bestScore = probableScores[0];
+            int bestScoreIndex = 0;
 
             for (PylosSphere sphere : usableSpheres) {
                 for (PylosLocation location : usableLocations) {
@@ -131,36 +131,27 @@ public class StudentPlayerBestFit extends PylosPlayer {
                         simulator.moveSphere(sphere, location);
                         calculateAllScores(board);
 
-                        int tempDeltaScore = totalOwnScore - totalEnemyScore;
-                        if(color==this.PLAYER_COLOR && tempDeltaScore >= smallestScore ) {
+                        int tempDeltaScore = totalOwnScore - totalEnemyScore; //moet maximaal zijn
+                        if(color==this.PLAYER_COLOR && tempDeltaScore >= bestScore || color==enemyColor&& tempDeltaScore <= bestScore) {
 
-                            probableSpheres[smallestScoreIndex] = sphere;
-                            probableLocations[smallestScoreIndex] = location;
-                            probableScores[smallestScoreIndex] = tempDeltaScore;
-                            smallestScore = tempDeltaScore;
+                            probableSpheres[bestScoreIndex] = sphere;
+                            probableLocations[bestScoreIndex] = location;
+                            probableScores[bestScoreIndex] = tempDeltaScore;
+                            bestScore = tempDeltaScore;
 
                             for (int i = 0; i < MaxNumberOfProbableMoves; i++) {
-                                if (smallestScore >= probableScores[i]) {
-                                    smallestScore = probableScores[i];
-                                    smallestScoreIndex = i;
+                                if (color==this.PLAYER_COLOR && bestScore <= probableScores[i]) {
+                                    bestScore = probableScores[i];
+                                    bestScoreIndex = i;
                                 }
-                            }
-
-                        }else if(color==enemyColor&& tempDeltaScore <= smallestScore ){
-
-                            probableSpheres[smallestScoreIndex] = sphere;
-                            probableLocations[smallestScoreIndex] = location;
-                            probableScores[smallestScoreIndex] = tempDeltaScore;
-                            smallestScore = tempDeltaScore;
-
-                            for (int i = 0; i < MaxNumberOfProbableMoves; i++) {
-                                if (smallestScore >= probableScores[i]) {
-                                    smallestScore = probableScores[i];
-                                    smallestScoreIndex = i;
+                                else if(color==enemyColor && bestScore >= probableScores[i]) {
+                                    bestScore = probableScores[i];
+                                    bestScoreIndex = i;
                                 }
                             }
 
                         }
+
 
                         if (isReserve) simulator.undoAddSphere(sphere, prevState, color);
                         else simulator.undoMoveSphere(sphere, prevLoc, prevState, color);
@@ -707,7 +698,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         int scoreForSquare = 100; //x4 moet nog steeds wel kleiner zijn dan reservescore plus wordt 4 keer meegerekend
         int scoreForAlmostSquare = 50; //x3
-        int scoreForSabotage = 250; //x1
+        int scoreForSabotage = reserveScore+1; //x1
 
          /*
                 STEP 2: Looking for squares in which the sphere is located
@@ -742,12 +733,12 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 score+=scoreForAlmostSquare;
             }
             else if(ownSpheres==1 && enemySpheres==3) {
-                //Zal maar één keer meegeteld worden als bonus
+                //Zal maar één keer meegeteld worden als bonus, we nemen reservescore omdat de totale score van de sphere (plus hoogte enz) sws groter is dan de reservescore
                 score+=scoreForSabotage;
             }
 
         }
-        score += height * 20;
+        score += height * valueHeightInLocationScore;
 
         //Midden geven we een beetje bonuspunten want daar lig je meestal beter dus midden midden krijgt 2 puntjes en midden rand krijgt er 1, rand rand krijgt niks
         if(goodSquares.size()!=1) score+=goodSquares.size()/2;
@@ -786,7 +777,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         int enemyAlmostSquares=0;
         for(PylosSquare square: givenLocation.getSquares()) {
             //OPM: bollen die horizontaal/verticaal naast onze locatie liggen, worden dubbel geteld in vergelijking met bollen die diagonaal liggen
-            //Dit is goed omdat we sws een horizontale/verticale buur nodig hebben om een bol te leggene daar waar je plots 2 vierkanten kan maken in de volgende beurt
+            //Dit is goed omdat we sws een horizontale/verticale buur nodig hebben om een bol te leggen daar waar je plots 2 vierkanten kan maken in de volgende beurt
             int ourSpheresInSquare = square.getInSquare(this);
             int enemySpheresInSquare = square.getInSquare(enemyColor);
             score+= ourSpheresInSquare+enemySpheresInSquare;
@@ -802,46 +793,5 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         scoreMapLocations.replace(givenLocation, score);
     }
-/*
-    private void updateAllScores(PylosBoard board) {
-        PylosLocation[] locationsNow = board.getLocations();
-        PylosLocation[] locationsPrev = previousBoard.getLocations();
 
-        for(int i=0; i<locationsNow.length; i++) {
-            PylosSphere currentSphere = locationsNow[i].getSphere();
-            PylosSphere oldSphere = locationsPrev[i].getSphere();
-            if (currentSphere!=oldSphere) {
-                //Option 1 the sphere was removed
-                if(currentSphere == null) {
-                    scoreMapSpheresOwn.replace(oldSphere, reserveScore);
-                    for(PylosSquare neighbourSquare: oldSphere.getLocation().getSquares()) {
-                        for(PylosLocation neighbourLocation: neighbourSquare.getLocations()) {
-                            if(neighbourLocation.isUsed()) {
-                                PylosSphere neighbourSphere = neighbourLocation.getSphere();
-                                evaluationFunctionSphere(neighbourSphere, board);
-                            }
-                            else{
-                                evaluationFunctionLocation(neighbourLocation, board);
-                            }
-                        }
-                    }
-                }
-
-                //Option 2 the sphere was placed
-                if(oldSphere == null) {
-                    for(PylosSquare neighbourSquare: currentSphere.getLocation().getSquares()) {
-                        for(PylosLocation neighbourLocation: neighbourSquare.getLocations()) {
-                            if(neighbourLocation.isUsed()) {
-                                PylosSphere neighbourSphere = neighbourLocation.getSphere();
-                                evaluationFunctionSphere(neighbourSphere, board);
-                            }
-                            else {
-                                evaluationFunctionLocation(neighbourLocation, board);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }*/
 }
