@@ -559,6 +559,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         return squares;
     }
 */
+
     // initializing the map that contains the score per sphere and save the first board
     private void initializeScore(PylosGameIF game, PylosBoard board) {
 
@@ -601,7 +602,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         for (PylosSphere sphere : mySpheres) {
             // If the sphere is still in the reserve, we will not need to calculate a score.
             if (!sphere.isReserve()) {
-                evaluationFunctionSphere(sphere, board,this.PLAYER_COLOR);
+                newEvaluationFunction(sphere, board,this.PLAYER_COLOR);
             }else {
                 scoreMapSpheresOwn.put(sphere, reserveScore);
             }
@@ -617,7 +618,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         for (PylosSphere sphere : enemySpheres) {
             // If the sphere is still in the reserve, we will not need to calculate a score.
             if (!sphere.isReserve()) {
-                evaluationFunctionSphere(sphere, board,enemyColor);
+                newEvaluationFunction(sphere, board,enemyColor);
             } else {
                 scoreMapSpheresEnemy.put(sphere, reserveScore);
             }
@@ -702,7 +703,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         scoreMapSpheresOwn.replace(sphere, score);
     }
 
-    private void newEvaluationFunction(PylosSphere sphere, PylosBoard board) {
+    private void newEvaluationFunction(PylosSphere sphere, PylosBoard board, PylosPlayerColor color) {
 
         int scoreForSquare = 100; //x4 moet nog steeds wel kleiner zijn dan reservescore plus wordt 4 keer meegerekend
         int scoreForAlmostSquare = 50; //x3
@@ -716,6 +717,10 @@ public class StudentPlayerBestFit extends PylosPlayer {
         // after the squares are found calculate the new score
         int score = 0;
 
+        PylosPlayerColor enemy;
+        if(color==this.PLAYER_COLOR)enemy=enemyColor;
+        else enemy=this.PLAYER_COLOR;
+
         int enemySpheres;
         int ownSpheres;
         int height = sphere.getLocation().Z;
@@ -723,8 +728,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         //Add the score for each square
         for (PylosSquare square : goodSquares) {
-            enemySpheres = square.getInSquare(enemyColor);
-            ownSpheres = square.getInSquare(this.PLAYER_COLOR);
+            enemySpheres = square.getInSquare(enemy);
+            ownSpheres = square.getInSquare(color);
             score+=enemySpheres+ownSpheres;
 
             //Bonus wanneer je bijna een vierkant maakt of effectief een vierkant hebt gemaakt
