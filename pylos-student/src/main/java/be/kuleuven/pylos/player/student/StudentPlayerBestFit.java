@@ -8,8 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static be.kuleuven.pylos.game.PylosGameState.MOVE;
-
 public class StudentPlayerBestFit extends PylosPlayer {
 
     private Map<PylosSphere, Integer> scoreMapSpheresOwn;
@@ -25,7 +23,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private int totalOwnScore = 0;
     private int totalEnemyScore = 0;
 
-    private final int recursionDepth = 15;
+    //recursiondepth verhogen zorgt voor een beter resultaat, maar dan duren de berekeningen langer
+    private final int recursionDepth = 12;
     private final int MaxNumberOfProbableMoves = 15;
 
     private PylosSphere sphereToMove=null;
@@ -280,15 +279,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
             }
 
             /**
-             * Ik heb dit aangepast zodat de eerste remove ALTIJD eentje is uit het net gemaakte vierkant
-
-             Eerste twee lijnen van de forlus waren zo:
-
-             for (PylosSphere sphere : board.getSpheres(nextColor)) {
-
-             if (!sphere.isReserve() && sphere.canRemove()) {
-
-
+             First delete will always take a sphere from the made square, hard coded want anders kon ons scoresysteem hiermee niet overweg.
              */
 
             PylosSphere[] spheresFromSquares = getSpheresInSquare(board, nextColor);
@@ -510,7 +501,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         for (PylosSphere sphere : mySpheres) {
             // If the sphere is still in the reserve, we will not need to calculate a score.
             if (!sphere.isReserve()) {
-                newEvaluationFunction(sphere, board,this.PLAYER_COLOR);
+                evaluationFunction(sphere, board,this.PLAYER_COLOR);
             }else {
                 scoreMapSpheresOwn.put(sphere, reserveScore);
             }
@@ -526,7 +517,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         for (PylosSphere sphere : enemySpheres) {
             // If the sphere is still in the reserve, we will not need to calculate a score.
             if (!sphere.isReserve()) {
-                newEvaluationFunction(sphere, board,enemyColor);
+                evaluationFunction(sphere, board,enemyColor);
             } else {
                 scoreMapSpheresEnemy.put(sphere, reserveScore);
             }
@@ -551,7 +542,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
 
 
-    private void newEvaluationFunction(PylosSphere sphere, PylosBoard board, PylosPlayerColor color) {
+    private void evaluationFunction(PylosSphere sphere, PylosBoard board, PylosPlayerColor color) {
 
         int scoreForSquare = 100; //x4 moet nog steeds wel kleiner zijn dan reservescore plus wordt 4 keer meegerekend
         int scoreForAlmostSquare = 50; //x3
