@@ -20,13 +20,13 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private PylosGameSimulator simulator;
 
     private final int valueHeightInLocationScore = 20;
-    private final int reserveScore = 750;
+    private int reserveScore = 750;
 
     private int totalOwnScore = 0;
     private int totalEnemyScore = 0;
 
-    private final int recursionDepth = 55;
-    private final int MaxNumberOfProbableMoves = 50;
+    private final int recursionDepth = 15;
+    private final int MaxNumberOfProbableMoves = 15;
 
     private PylosSphere sphereToMove=null;
     private PylosLocation locationToMove=null;
@@ -117,7 +117,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
                         calculateAllScores(board);
 
                         int tempDeltaScore = totalOwnScore - totalEnemyScore; //moet maximaal zijn
-                        if(color==this.PLAYER_COLOR && tempDeltaScore >= bestScore || color==enemyColor&& tempDeltaScore <= bestScore) {
+                        if((color==this.PLAYER_COLOR && tempDeltaScore >= bestScore) || (color==enemyColor && tempDeltaScore <= bestScore)) {
 
                             probableSpheres[bestScoreIndex] = sphere;
                             probableLocations[bestScoreIndex] = location;
@@ -136,7 +136,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
                             }
 
                         }
-
 
                         if (isReserve) simulator.undoAddSphere(sphere, prevState, color);
                         else simulator.undoMoveSphere(sphere, prevLoc, prevState, color);
@@ -169,9 +168,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
             }
 
             //go over each sphere to each possible location
-            /*
-            for (PylosSphere sphere : probableSpheres) {
-                for (PylosLocation location : probableLocations) {*/
+
             for(int i=0;i<MaxNumberOfProbableMoves;i++) {
                 PylosSphere sphere = probableSpheres[i];
                 PylosLocation location = probableLocations[i];
@@ -263,12 +260,11 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 }
             }
 
-            sphereToMove = tempSphere;
-            locationToMove = tempLocation;
-
-            if(sphereToMove == null && depth == 0){
-                System.out.print("sdfs");
+            if(depth == 0) {
+                sphereToMove = tempSphere;
+                locationToMove = tempLocation;
             }
+
 
             return tempDeltaScoreAllSpheres;
 
@@ -336,6 +332,9 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
             sphereToMove=tempSphere;
 
+            if(depth == 0 && sphereToMove == null){
+                System.out.print("sdfs");
+            }
 
             return tempDeltaScoreAllSpheres;
 
@@ -481,7 +480,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
             enemyColor = PylosPlayerColor.DARK;
         } else enemyColor = PylosPlayerColor.LIGHT;
 
-
         scoreMapSpheresOwn = new HashMap<>();
         scoreMapSpheresEnemy = new HashMap<>();
         simulator = new PylosGameSimulator(game.getState(), this.PLAYER_COLOR,board);
@@ -496,6 +494,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         for (PylosSphere sphere : enemySpheres) {
             scoreMapSpheresEnemy.put(sphere, reserveScore);
         }
+
 
 
         previousBoard = board;
@@ -541,73 +540,16 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
     }
 
-    //gives a score to a sphere
-    /*
-    * 3 spheres = 5 * 2 spheres -> 45
-    * 2 spheres = 3 * 1 sphere  -> 9
-    * 1 sphere = 3 * 0 spheres  -> 3
-    * 0 spheres                 -> 1
-    * 4 spheres = reservescore  -> 45
-    * reservescore = 3 spheres  -> 45
-    * height score > 2 * 2s + 2 * 1s -> heightscore = 25
-    *
-    * */
-
-    private void evaluationFunctionSphere(PylosSphere sphere, PylosBoard board, PylosPlayerColor color) {
-
-        List<PylosSquare> goodSquares = sphere.getLocation().getSquares();
-
-        PylosPlayerColor enemy;
-        if(color==this.PLAYER_COLOR)enemy=enemyColor;
-        else enemy=this.PLAYER_COLOR;
-
-        // after the squares are found calculate the new score
-        int score = 0;
-
-        int enemySpheres;
-        int ownSpheres;
-        int height = sphere.getLocation().Z;
-
-        //Add the score for each square
-        for (PylosSquare square : goodSquares) {
-            enemySpheres = square.getInSquare(enemy);
-            ownSpheres = square.getInSquare(color);
-            switch(ownSpheres){
-                case 0:
-                    score+=1;
-                    break;
-                case 1:
-                    score+=3;
-                    break;
-                case 2:
-                    score+=9;
-                    break;
-                case 3 | 4 :
-                    score+=45;
-                    break;
-            }
-
-            switch(enemySpheres){
-                case 0:
-                    score+=1;
-                    break;
-                case 1:
-                    score+=3;
-                    break;
-                case 2:
-                    score+=9;
-                    break;
-                case 3 | 4 :
-                    score+=45;
-                    break;
-            }
-
-
+    public int exponent(int base, int exp){
+        int result=1;
+        for(int i=0;i<exp;i++){
+            result = result*base;
         }
-        score += height * 40;
 
-        scoreMapSpheresOwn.replace(sphere, score);
+        return result;
     }
+
+
 
     private void newEvaluationFunction(PylosSphere sphere, PylosBoard board, PylosPlayerColor color) {
 
@@ -658,7 +600,8 @@ public class StudentPlayerBestFit extends PylosPlayer {
         //Midden geven we een beetje bonuspunten want daar lig je meestal beter dus midden midden krijgt 2 puntjes en midden rand krijgt er 1, rand rand krijgt niks
         if(goodSquares.size()!=1) score+=goodSquares.size()/2;
 
-        scoreMapSpheresOwn.replace(sphere, score);
+        if(color==this.PLAYER_COLOR)scoreMapSpheresOwn.replace(sphere, score);
+        else scoreMapSpheresEnemy.replace(sphere, score);
     }
 
 
