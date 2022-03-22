@@ -14,7 +14,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
     private Map<PylosSphere, Integer> scoreMapSpheresOwn;
     private Map<PylosSphere, Integer> scoreMapSpheresEnemy;
-    private Map<PylosLocation, Integer> scoreMapLocations;
     private boolean initialized = false;
     private PylosBoard previousBoard;
     private PylosPlayerColor enemyColor;
@@ -26,18 +25,12 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private int totalOwnScore = 0;
     private int totalEnemyScore = 0;
 
-    private final int recursionDepth = 2;
-    private final int MaxNumberOfProbableMoves = 15;
+    private final int recursionDepth = 55;
+    private final int MaxNumberOfProbableMoves = 50;
 
     private PylosSphere sphereToMove=null;
     private PylosLocation locationToMove=null;
     private boolean toRemoveSec = false;
-
-
-    // check** globale map: key= sphere , value = score // optioneel: 2 scores, verliezend of winnend
-    // check** (ben niet zeker of dit nodig is)+(java gebruikt pass by copy bij argumenten) globale Board opslaan, en iedere locatie vergelijkt met de vorige -> nieuwe scores
-    // evaluatie fctie: vierkant, eigen ballen in square viscinity, enemy ballen in square viscinity, hoe lager de bal; hoe lager de score
-    // eigen vierkant of enemy vierkant? -> hangt ervan af hoeveel ballen in reserve zijn bij ons en de enemy
 
 
     @Override
@@ -58,13 +51,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         calculateAllScores(board);
 
         minMaxRecursie(board,0,this.PLAYER_COLOR);
-        if(locationToMove!=null && !sphereToMove.canMoveTo(locationToMove)){
-            System.out.print("sdf");
-        }
 
-        if(locationToMove==null){
-            System.out.print("sdf");
-        }
         game.moveSphere(sphereToMove,locationToMove);
 
     }
@@ -75,7 +62,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         PylosGameState prevState=simulator.getState();
         PylosPlayerColor nextColor;
-
+        int tempWinner=Integer.MIN_VALUE;;
         int tempDeltaScoreAllSpheres;
         if(color==this.PLAYER_COLOR){
             nextColor=enemyColor;
@@ -125,9 +112,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
                         PylosLocation prevLoc = sphere.getLocation();
                         prevState = simulator.getState();
-                        if(simulator.getColor() != color){
-                            System.out.print("sdf");
-                        }
+
                         simulator.moveSphere(sphere, location);
                         calculateAllScores(board);
 
@@ -198,6 +183,16 @@ public class StudentPlayerBestFit extends PylosPlayer {
                     prevState = simulator.getState();
 
                     simulator.moveSphere(sphere, location);
+                    if(simulator.getState() == PylosGameState.COMPLETED && depth != 0) {
+                        PylosPlayerColor winner = simulator.getWinner();
+
+                        if (isReserve) simulator.undoAddSphere(sphere, prevState, color);
+                        else simulator.undoMoveSphere(sphere, prevLoc, prevState, color);
+
+                        if (winner == this.PLAYER_COLOR) {
+                            return Integer.MAX_VALUE;
+                        } else return Integer.MIN_VALUE;
+                    }
 
                     calculateAllScores(board);
                     int tempDeltaScore;
@@ -205,15 +200,48 @@ public class StudentPlayerBestFit extends PylosPlayer {
                     //at the end of the recursion or not? not: keep going
                     int tempDepth = depth;
                     if (tempDepth < recursionDepth) {
-
                         tempDepth++;
                         tempDeltaScore = minMaxRecursie(board, tempDepth, nextColor);
                     } else {
                         tempDeltaScore = totalOwnScore - totalEnemyScore;
                     }
 
+                    if(tempDeltaScore == Integer.MAX_VALUE){
+                        if(depth == 0) {
+                            if( tempWinner <= totalOwnScore) {
+                                double rand = Math.random();
+                                if (tempWinner == totalOwnScore && rand < 0.5) {
+                                } else {
+                                    tempWinner = totalOwnScore;
+                                    tempSphere = sphere;
+                                    tempLocation = location;
+                                }
+                            }
+                        }else{
+                            if (isReserve) simulator.undoAddSphere(sphere, prevState, color);
+                            else simulator.undoMoveSphere(sphere, prevLoc, prevState, color);
+                            return Integer.MAX_VALUE;
+                        }
+                    }else if (tempDeltaScore == Integer.MIN_VALUE){
+                        if(depth ==0 && tempSphere == null){
+                            if( tempWinner <= totalOwnScore) {
+                                double rand = Math.random();
+                                if (tempWinner == totalOwnScore && rand < 0.5) {
+                                } else {
+                                    tempWinner = totalOwnScore;
+                                    tempSphere = sphere;
+                                    tempLocation = location;
+                                }
+                            }
+                        }else{
+                        if (isReserve) simulator.undoAddSphere(sphere, prevState, color);
+                        else simulator.undoMoveSphere(sphere, prevLoc, prevState, color);
+
+                        return Integer.MIN_VALUE;
+                        }
+                    }
                     //if new delta is bigger then use that one (own turn)
-                    if (color == this.PLAYER_COLOR && tempDeltaScoreAllSpheres <= tempDeltaScore) {
+                    else if (color == this.PLAYER_COLOR && tempDeltaScoreAllSpheres <= tempDeltaScore) {
                         double rand = Math.random();
                         if (tempDeltaScoreAllSpheres == tempDeltaScore && rand < 0.5) {
                         } else {
@@ -237,6 +265,10 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
             sphereToMove = tempSphere;
             locationToMove = tempLocation;
+
+            if(sphereToMove == null && depth == 0){
+                System.out.print("sdfs");
+            }
 
             return tempDeltaScoreAllSpheres;
 
@@ -306,8 +338,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
 
             return tempDeltaScoreAllSpheres;
-
-
 
         }else if(currentState == PylosGameState.REMOVE_SECOND){
             PylosSphere tempSphere = null;
@@ -441,115 +471,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
             game.pass();
         }
     }
-/*
-    private boolean tryToMakeOwnSquare(PylosGameIF game, PylosBoard board) {
-        boolean moved = false;
 
-        //check 1 : can we make our own square?
-        List<PylosSquare> squaresToComplete = getPossibleCompleteOwnSquares(board);
-        if (!squaresToComplete.isEmpty()) {
-            moved = makeOrSabotageBestSquareFromList(game, board, squaresToComplete);
-        }
-
-        return moved;
-    }
-
-    private boolean tryToSabotageEnemySquare(PylosGameIF game, PylosBoard board) {
-        boolean moved = false;
-
-        List<PylosSquare> squaresToSabotage = getPossibleCompleteEnemySquares(board);
-        if (!squaresToSabotage.isEmpty()) {
-            moved = makeOrSabotageBestSquareFromList(game, board, squaresToSabotage);
-        }
-        return moved;
-    }
-
-    private boolean makeOrSabotageBestSquareFromList(PylosGameIF game, PylosBoard board, List<PylosSquare> doableSquares) {
-        //Initialize moving values, should be overwrited anyway
-        PylosSphere movingSphere = board.getReserve(this);
-        PylosLocation movingLocation = null;
-
-        // step 1 : can we make a square by moving a ball on the board?
-        PylosSphere tempSphere = movingSphere;
-        PylosLocation tempLocation = movingLocation;
-
-        for (PylosSquare square : doableSquares) {
-            for (PylosLocation location : square.getLocations()) {
-                tempSphere = getMovableSquareFromBoardTo(board, location);
-                if (tempSphere != null) tempLocation = location;
-            }
-            //check: did we get even one square where we can make it with a sphere from the board?
-            if (tempSphere != null) {
-                //If this best tempSphere from the board has a lower score than movingsphere, we will use it
-                if (scoreMapSpheresOwn.get(tempSphere) < scoreMapSpheresOwn.get(movingSphere)) {
-                    movingSphere = tempSphere;
-                    movingLocation = tempLocation;
-                }
-            }
-        }
-
-        //step 2 : if we can't make the square with a sphere from the board then we use the reserve (basic) but the location is not yet identified
-        if(movingLocation==null) {
-
-            for(PylosLocation location: doableSquares.get(0).getLocations()) {
-                if(location.isUsable()) movingLocation = location;
-            }
-        }
-
-
-        //step 3 : we fill the square that we just chose
-        if (movingLocation != null && movingSphere.canMoveTo(movingLocation)) {
-            game.moveSphere(movingSphere, movingLocation);
-            return true;
-        }
-
-        return false;
-    }
-
-    private PylosSphere getMovableSquareFromBoardTo(PylosBoard board, PylosLocation location) {
-        PylosSphere movingSphere = null;
-        for (PylosSphere sphere : board.getSpheres(this)) {
-            if (!sphere.isReserve() && sphere.canMoveTo(location)) {
-                if (movingSphere != null) {
-                    if (scoreMapSpheresOwn.get(sphere) < scoreMapSpheresOwn.get(movingSphere)) {
-                        movingSphere = sphere;
-                    }
-                } else {
-                    movingSphere = sphere;
-                }
-
-            }
-        }
-        return movingSphere;
-    }
-
-
-    //check for the squares that are almost complete (own color)
-    private List<PylosSquare> getPossibleCompleteOwnSquares(PylosBoard board) {
-        List<PylosSquare> squares = new ArrayList<>();
-
-        for (PylosSquare square : board.getAllSquares()) {
-            if (square.getInSquare(this) == 3 && square.getInSquare(enemyColor) == 0) {
-                squares.add(square);
-            }
-        }
-
-        return squares;
-    }
-
-    //check for the squares that are almost complete (enemy color)
-    private List<PylosSquare> getPossibleCompleteEnemySquares(PylosBoard board) {
-        List<PylosSquare> squares = new ArrayList<>();
-
-        for (PylosSquare square : board.getAllSquares()) {
-            if (square.getInSquare(enemyColor) == 3) {
-                squares.add(square);
-            }
-        }
-
-        return squares;
-    }
-*/
 
     // initializing the map that contains the score per sphere and save the first board
     private void initializeScore(PylosGameIF game, PylosBoard board) {
@@ -562,7 +484,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
         scoreMapSpheresOwn = new HashMap<>();
         scoreMapSpheresEnemy = new HashMap<>();
-        scoreMapLocations = new HashMap<>();
         simulator = new PylosGameSimulator(game.getState(), this.PLAYER_COLOR,board);
 
         PylosSphere[] mySpheres = board.getSpheres(this);
@@ -576,9 +497,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
             scoreMapSpheresEnemy.put(sphere, reserveScore);
         }
 
-        for(PylosLocation location: board.getLocations()) {
-            scoreMapLocations.put(location, location.Z*valueHeightInLocationScore);
-        }
 
         previousBoard = board;
         initialized = true;
@@ -621,9 +539,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
         }
         totalEnemyScore=tempvalue;
 
-        for(PylosLocation location : board.getLocations()){
-            evaluationFunctionLocationTest(location,board);
-        }
     }
 
     //gives a score to a sphere
@@ -746,52 +661,5 @@ public class StudentPlayerBestFit extends PylosPlayer {
         scoreMapSpheresOwn.replace(sphere, score);
     }
 
-
-
-    private void evaluationFunctionLocationTest(PylosLocation givenLocation, PylosBoard board) {
-
-        // after the squares are found calculate the new score
-        int score = 0;
-
-        int enemySpheres;
-        int ownSpheres;
-        int height = givenLocation.Z;
-
-        //Add the score for each square
-        for (PylosSquare square : givenLocation.getSquares()) {
-            enemySpheres = square.getInSquare(enemyColor);
-            ownSpheres = square.getInSquare(this.PLAYER_COLOR);
-            score += (enemySpheres * enemySpheres * 15 + 20);
-            score += (ownSpheres  * ownSpheres  * 15 + 30);
-        }
-        score += height * 50;
-
-        scoreMapLocations.replace(givenLocation, score);
-
-    }
-
-
-    private void evaluationFunctionLocation(PylosLocation givenLocation, PylosBoard board) {
-        int score = 0;
-        int ourAlmostSquares=0;
-        int enemyAlmostSquares=0;
-        for(PylosSquare square: givenLocation.getSquares()) {
-            //OPM: bollen die horizontaal/verticaal naast onze locatie liggen, worden dubbel geteld in vergelijking met bollen die diagonaal liggen
-            //Dit is goed omdat we sws een horizontale/verticale buur nodig hebben om een bol te leggen daar waar je plots 2 vierkanten kan maken in de volgende beurt
-            int ourSpheresInSquare = square.getInSquare(this);
-            int enemySpheresInSquare = square.getInSquare(enemyColor);
-            score+= ourSpheresInSquare+enemySpheresInSquare;
-            if(ourSpheresInSquare==2 && enemySpheresInSquare==0) ourAlmostSquares++;
-            if(enemySpheresInSquare==2 && ourSpheresInSquare==0) enemyAlmostSquares++;
-        }
-        //bonus points: als we met één zet ervoor kunnen zorgen dat je op 2 plekken een vierkant gaat kunnen leggen
-        score+=ourAlmostSquares*6;
-        score+=enemyAlmostSquares*4;
-
-        //Om ervoor te zorgen dat je in het begin start in het midden, hoe meer squares hoe beter
-        score+=givenLocation.getSquares().size();
-
-        scoreMapLocations.replace(givenLocation, score);
-    }
 
 }
